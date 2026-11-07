@@ -1,5 +1,7 @@
 # Arise - RTM (GTA V 1.57) - FR
 
+**[Télécharger la dernière version](https://github.com/ZiToUnEAnTiCipWiN32/Arise-RTM-FR/releases/latest)** — Windows, .NET Framework 4.8.1
+
 Éditeur de tenues, fast run, compétences au max, rang, téléports et K/D personnalisé pour **GTA V Online 1.57 sur PS4**, piloté depuis le PC.
 
 Code d'origine par **yAmethxst** — [X](https://x.com/yAmethxst) · [Discord](https://amethxst.dev/discord)
