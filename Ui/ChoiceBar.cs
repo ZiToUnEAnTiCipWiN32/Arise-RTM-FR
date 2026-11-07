@@ -1,3 +1,12 @@
+/*
+ * Arise - RTM (GTA V 1.57) - FR
+ * Copyright (C) 2026 yAmethxst — code d'origine
+ * Copyright (C) 2026 Zitoune — modifications du fork
+ *
+ * Ce fichier est distribué sous GNU GPL v3 (voir LICENSE). Les parties issues
+ * de l'outil d'origine restent sous licence MIT (voir LICENSE-MIT).
+ */
+
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -5,7 +14,8 @@ using System.Windows.Forms;
 
 namespace Arise_RTM
 {
-    /// <summary>A row of toggle buttons where one at most is selected (-1 = none). Styled like the toolbar's.</summary>
+    /// <summary>Une rangée de boutons bascules dont au plus un est sélectionné à la fois
+    /// (-1 = aucun). Même style visuel que les boutons de la barre d'outils.</summary>
     internal sealed class ChoiceBar : Panel
     {
         private readonly List<RadioButton> buttons = new List<RadioButton>();

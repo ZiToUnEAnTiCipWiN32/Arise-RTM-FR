@@ -1,10 +1,19 @@
+/*
+ * Arise - RTM (GTA V 1.57) - FR
+ * Copyright (C) 2026 yAmethxst — code d'origine
+ * Copyright (C) 2026 Zitoune — modifications du fork
+ *
+ * Ce fichier est distribué sous GNU GPL v3 (voir LICENSE). Les parties issues
+ * de l'outil d'origine restent sous licence MIT (voir LICENSE-MIT).
+ */
+
 using System;
 using System.Collections.Generic;
 using System.Text;
 
 namespace Arise_RTM
 {
-    /// <summary>Reads and writes the outfit slots (names and components) directly in the game's memory.</summary>
+    /// <summary>Lit et écrit les slots de tenue (noms et composants) directement en mémoire du jeu.</summary>
     public class GTAOutfits
     {
         private readonly PS4Connection connection;

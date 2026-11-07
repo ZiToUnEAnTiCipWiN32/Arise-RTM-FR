@@ -28,6 +28,12 @@ namespace libdebug {
         private const int PS4DBG_DEBUG_PORT = 755;
         private const int NET_MAX_LENGTH = 0x20000; // 128kb
 
+        // Garde-fous contre un flux désynchronisé : une réponse corrompue peut annoncer
+        // un nombre d'entrées absurde et provoquer une allocation énorme.
+        private const int MAX_PROC_LIST_COUNT = 8192;
+        private const int MAX_PROC_MAP_COUNT = 200000;
+        private const int MAX_RECEIVE_LENGTH = 0x4000000; // 64 Mo
+
         private const int BROADCAST_PORT = 1010;
         private const uint BROADCAST_MAGIC = 0xFFFFAAAA;
 
@@ -292,6 +298,9 @@ namespace libdebug {
         }
 
         private byte[] ReceiveData(int length) {
+            if (length < 0 || length > MAX_RECEIVE_LENGTH)
+                throw new InvalidDataException("Flux ps4debug désynchronisé : taille de réponse invalide (" + length + "). Reconnectez la PS4.");
+
             MemoryStream s = new MemoryStream();
 
             int left = length;
@@ -300,6 +309,8 @@ namespace libdebug {
             while (left > 0) {
                 // adhere to length
                 recv = sock.Receive(b, Math.Min(left, NET_MAX_LENGTH), SocketFlags.None);
+                if (recv <= 0)
+                    throw new IOException("Connexion ps4debug fermée pendant la lecture. Reconnectez la PS4.");
                 s.Write(b, 0, recv);
                 left -= recv;
             }
@@ -314,7 +325,9 @@ namespace libdebug {
 
         private CMD_STATUS ReceiveStatus() {
             byte[] status = new byte[4];
-            sock.Receive(status, 4, SocketFlags.None);
+            int recv = sock.Receive(status, 4, SocketFlags.None);
+            if (recv != 4)
+                throw new IOException("Connexion ps4debug fermée pendant la lecture du statut. Reconnectez la PS4.");
             return (CMD_STATUS)BitConverter.ToUInt32(status, 0);
         }
 
@@ -384,7 +397,7 @@ namespace libdebug {
                         byte[] resp = uc.Receive(ref server);
                         if (BitConverter.ToUInt32(resp, 0) == BROADCAST_MAGIC)
                             return server.Address.ToString();
-                    } catch (Exception ex) {
+                    } catch (Exception) {
                         Console.WriteLine("Wrong IP, trying next one...");
                     }
                 }

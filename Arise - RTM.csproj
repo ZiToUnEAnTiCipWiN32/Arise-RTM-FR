@@ -19,9 +19,12 @@
     <Content Include="offsets.ini" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="outfit_example.txt" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="stats_example.txt" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="preset_max_tout.txt" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="exemples\*.txt" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="README.md" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="CREDITS.txt" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="LICENSE" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="LICENSE-MIT" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

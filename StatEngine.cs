@@ -1,3 +1,12 @@
+/*
+ * Arise - RTM (GTA V 1.57) - FR
+ * Copyright (C) 2026 yAmethxst — code d'origine
+ * Copyright (C) 2026 Zitoune — modifications du fork
+ *
+ * Ce fichier est distribué sous GNU GPL v3 (voir LICENSE). Les parties issues
+ * de l'outil d'origine restent sous licence MIT (voir LICENSE-MIT).
+ */
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,10 +17,11 @@ namespace Arise_RTM
     public enum StatKind { Unknown, Int, Bool, Float }
 
     /// <summary>
-    /// Calls the game's native handlers through the ps4debug RPC stub.
-    /// A handler is void f(NativeArg_s*): one pointer to a context whose ArgValues (ctx+0x10)
-    /// points to 8-byte argument slots. The return value is written to ReturnValue[0].
-    /// Preflight is read-only; the RPC stub is installed on the first real call.
+    /// Appelle les handlers natifs du jeu via le stub RPC de ps4debug.
+    /// Un handler est de la forme void f(NativeArg_s*) : un pointeur vers un contexte dont
+    /// ArgValues (ctx+0x10) pointe vers des slots d'arguments de 8 octets. La valeur de retour
+    /// est écrite dans ReturnValue[0]. Le précontrôle est en lecture seule ; le stub RPC n'est
+    /// installé qu'au premier appel réel.
     /// </summary>
     public sealed class StatEngine
     {
@@ -23,6 +33,13 @@ namespace Arise_RTM
         private const int OutputOffset = 0x200;
         private const int MaxNativeArgs = 8;
 
+        /// <summary>
+        /// Prologue attendu pour un handler natif thread-safe (stats, packed) : push rbp; mov rbp, rsp.
+        /// Les wrappers tail-call (48 8B 47 10 mov rax, [rdi+0x10]) étaient aussi acceptés mais ils
+        /// correspondent à des natives qui touchent au script host (ped, vehicle, streaming) ; les
+        /// appeler depuis un thread RPC externe provoque un kernel panic — ces options ont été
+        /// retirées, le preflight n'accepte donc plus que le prologue classique.
+        /// </summary>
         private static readonly byte[] EntryPrologue = { 0x55, 0x48, 0x89, 0xE5 };
 
         private sealed class HandlerState
@@ -94,13 +111,13 @@ namespace Arise_RTM
             ProcessMap map = connection.GetProcessMaps(pid);
             if (map == null || map.entries == null || map.entries.Length == 0)
             {
-                failure = "Could not read the process memory map.";
+                failure = "Impossible de lire la carte mémoire du processus.";
                 return false;
             }
 
             MemoryEntry image = FindMainImage(map);
             if (image != null)
-                log($"Main image '{image.name}' starts at 0x{image.start:X} (profile address_base 0x{profile.AddressBase:X}).");
+                log($"Image principale « {image.name} » à 0x{image.start:X} (address_base du profil 0x{profile.AddressBase:X}).");
 
             foreach (KeyValuePair<string, ulong> pair in profile.Handlers)
             {
@@ -123,7 +140,7 @@ namespace Arise_RTM
                 }
 
                 handler.Available = false;
-                log("WARNING (optional handler disabled): " + problem);
+                log("AVERTISSEMENT (handler facultatif désactivé) : " + problem);
             }
 
             IsReady = true;
@@ -226,7 +243,7 @@ namespace Arise_RTM
         public void WriteGameMemory(ulong address, byte[] data)
         {
             if (!IsReady)
-                throw new InvalidOperationException("Preflight has not passed.");
+                throw new InvalidOperationException("Le précontrôle n'a pas réussi.");
 
             connection.WriteMemory(pid, address, data);
         }
@@ -246,7 +263,7 @@ namespace Arise_RTM
             }
 
             if (stored > 0)
-                log($"Signatures stored for {titleId}: {stored} handler(s).");
+                log($"Signatures enregistrées pour {titleId} : {stored} handler(s).");
 
             return stored;
         }
@@ -309,27 +326,27 @@ namespace Arise_RTM
             MemoryEntry region = FindRegion(map, handler.Absolute);
             if (region == null)
             {
-                problem = $"{handler.Key}: address 0x{handler.Absolute:X} is not mapped. Check address_base in profile.ini.";
+                problem = $"{handler.Key} : adresse 0x{handler.Absolute:X} non mappée. Vérifiez address_base dans profile.ini.";
                 return false;
             }
 
             if ((region.prot & ProtExecute) == 0)
             {
-                problem = $"{handler.Key}: address 0x{handler.Absolute:X} is not in an executable region ({region.name}).";
+                problem = $"{handler.Key} : l'adresse 0x{handler.Absolute:X} n'est pas dans une région exécutable ({region.name}).";
                 return false;
             }
 
             byte[] code = connection.ReadMemory(pid, handler.Absolute, SignatureLength);
             if (code == null || code.Length < SignatureLength)
             {
-                problem = $"{handler.Key}: could not read {SignatureLength} bytes at 0x{handler.Absolute:X}.";
+                problem = $"{handler.Key} : lecture impossible de {SignatureLength} octets à 0x{handler.Absolute:X}.";
                 return false;
             }
 
             if (!code.Take(EntryPrologue.Length).SequenceEqual(EntryPrologue))
             {
-                problem = $"{handler.Key}: 0x{handler.Absolute:X} is not a function entry (expected {ToHex(EntryPrologue)}, found {ToHex(code)}).\n" +
-                          "Nothing was called. Check address_base in profile.ini.";
+                problem = $"{handler.Key} : 0x{handler.Absolute:X} n'est pas une entrée de fonction (attendu {ToHex(EntryPrologue)}, trouvé {ToHex(code)}).\n" +
+                          "Rien n'a été appelé. Vérifiez address_base dans profile.ini.";
                 return false;
             }
 
@@ -338,18 +355,18 @@ namespace Arise_RTM
             {
                 if (!expected.SequenceEqual(code))
                 {
-                    problem = $"{handler.Key}: bytes at 0x{handler.Absolute:X} differ from the stored signature.\n" +
-                              $"Found:    {ToHex(code)}\nExpected: {ToHex(expected)}";
+                    problem = $"{handler.Key} : les octets à 0x{handler.Absolute:X} diffèrent de la signature enregistrée.\n" +
+                              $"Trouvé  : {ToHex(code)}\nAttendu : {ToHex(expected)}";
                     return false;
                 }
 
                 handler.Verified = true;
-                state = "entry OK, signature matches";
+                state = "entrée OK, signature concordante";
             }
             else
             {
                 handler.Pending = code;
-                state = "entry OK, UNVERIFIED (no stored signature)";
+                state = "entrée OK, NON VÉRIFIÉ (aucune signature enregistrée)";
             }
 
             handler.Available = true;
@@ -365,20 +382,20 @@ namespace Arise_RTM
         private void EnsureRpc()
         {
             if (!IsReady)
-                throw new InvalidOperationException("Preflight has not passed.");
+                throw new InvalidOperationException("Le précontrôle n'a pas réussi.");
 
             if (rpcStub != 0)
                 return;
 
             rpcStub = connection.InstallRpc(pid);
             if (rpcStub == 0)
-                throw new InvalidOperationException("RPC install returned a null stub.");
+                throw new InvalidOperationException("L'installation du RPC a renvoyé un stub nul.");
 
             scratchBuffer = connection.AllocateMemory(pid, ScratchSize);
             if (scratchBuffer == 0)
-                throw new InvalidOperationException("Could not allocate the scratch buffer in the game process.");
+                throw new InvalidOperationException("Impossible d'allouer le tampon de travail dans le processus du jeu.");
 
-            log($"RPC stub at 0x{rpcStub:X}, scratch buffer at 0x{scratchBuffer:X}.");
+            log($"Stub RPC à 0x{rpcStub:X}, tampon de travail à 0x{scratchBuffer:X}.");
         }
 
         private ulong CallNative(string key, params ulong[] args)
@@ -393,10 +410,10 @@ namespace Arise_RTM
         {
             EnsureRpc();
             if (args.Length > MaxNativeArgs)
-                throw new ArgumentException("Too many native arguments.");
+                throw new ArgumentException("Trop d'arguments natifs.");
 
             if (!handlers.TryGetValue(key, out HandlerState handler) || !handler.Available)
-                throw new InvalidOperationException($"Handler '{key}' is not available on this build.");
+                throw new InvalidOperationException($"Handler « {key} » indisponible sur ce build.");
 
             ulong argsAddress = scratchBuffer + ArgsOffset;
             byte[] block = new byte[ArgsOffset + MaxNativeArgs * 8];

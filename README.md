@@ -1,80 +1,102 @@
-# Arise - RTM
+# Arise - RTM (GTA V 1.57) - FR
 
-Outfit editor, fast run unlock and custom K/D for **GTA V Online 1.57 on PS4**, run from your PC.
+Éditeur de tenues, fast run, compétences au max, rang, téléports et K/D personnalisé pour **GTA V Online 1.57 sur PS4**, piloté depuis le PC.
 
-Made by **yAmethxst**: [X](https://x.com/yAmethxst) · [Discord](https://amethxst.dev/discord)
+Code d'origine par **yAmethxst** — [X](https://x.com/yAmethxst) · [Discord](https://amethxst.dev/discord)
 
-![The main tab](screenshots/main.png)
+Fork français avec options supplémentaires par **Zitoune** — [Site](https://zitouneanticip.fr) · [YouTube](https://youtube.com/@Zitoune-anticip-WIN32) · [Twitch](https://twitch.tv/zitouneanticip) · [Discord](https://discord.gg/yBduvdrgHA)
 
-![The debug tab](screenshots/debug.png)
+![Onglet principal](screenshots/main.png)
 
-## Features
+![Onglet Outils](screenshots/tools.png)
 
-- **Outfit editor**: rename your saved outfits (31-byte limit), edit every component, and import an outfit from text or from a `.txt` file on your PC. The format is in `outfit_example.txt` and is also shown inside the tool.
-- **Create your name**: the "Create your name here" button opens https://amethxst.dev/gta-name. Build the name there and paste it in the tool.
-- **Teleport**: a button that moves your character straight to the clothing shop.
-- **Fast run**: unlocks the permanent fast run on the character you choose.
-- **Custom K/D**: set the K/D ratio, or the kills and deaths on their own.
-- **Debug tab** (advanced): write or read any stat by name, set a packed value by index, or run a list of writes from a `.txt` file on your PC. Nothing is bundled: the tool writes only what you type or load. See below.
+![Onglet debug](screenshots/debug.png)
 
-## Requirements
+## Fonctionnalités
 
-- PS4 on **firmware 14.00**, jailbroken with GoldHEN.
-- GTA V **1.57**, EU (`CUSA00411`) or US (`CUSA00419`).
-- A Windows PC on the same network as the console, with .NET Framework 4.8.1.
+### Onglet Principal
+- **Éditeur de tenues** : renomme les emplacements enregistrés (limite 31 octets), édite chaque composant, et importe une tenue depuis un texte collé ou un fichier `.txt` sur ton PC (format dans `outfit_example.txt`).
+- **Export de tenue** : copie la tenue sélectionnée dans le presse-papier ou enregistre-la en `.txt` (même format que l'import, rechargeable sans perte).
+- **Créer son nom** : le bouton « Créer un nom en ligne » ouvre https://amethxst.dev/gta-name.
+- **Téléport boutique de vêtements** : te déplace directement devant la boutique.
+- **Fast run** : débloque la course rapide permanente sur le personnage choisi.
+- **Compétences au max** : met les 7 compétences (endurance, tir, force, discrétion, pilotage, conduite, apnée) à 100 et pousse l'état psychiatrique au maximum.
+- **K/D personnalisé** : fixe le ratio K/D, les éliminations ou les morts séparément.
 
-Tested on firmware 14.00 with GTA V 1.57 (EU).
+### Onglet Outils
+- **Niveau / RP** : fixe le rang (1 à 8000) ou directement les RP cumulés. Table officielle du jeu + formule quadratique au-delà du rang 100.
+- **Téléports** : 16 lieux prédéfinis (Legion Square, Casino Diamond, Maze Bank, Vinewood Sign, Mont Chiliad, jetées, hôpital, golf, etc.) ou coordonnées libres X/Y/Z. La liste est modifiable dans `teleports.txt` (ajout, renommage, suppression).
 
-## How to use
+### Onglet Debug (avancé)
+Écrit ou lit n'importe quelle stat par nom, fixe une valeur packed par index, ou exécute une liste d'écritures depuis un fichier `.txt` du PC. Rien n'est prérempli : l'outil n'écrit que ce que tu tapes ou charges. Un preset complet et commenté est fourni dans `preset_max_tout.txt`, un exemple minimal dans `stats_example.txt`, et des listes prêtes à l'emploi dans le dossier `exemples\`.
 
-1. Make sure the PS4 is on firmware **14.00**.
-2. On the console, open https://well0nez.github.io/afterglow-web/ and jailbreak it.
-3. In GoldHEN, open **Server Settings** and enable **FTP** and **Payload Loader**.
-4. Start GTA V.
-5. Download `Arise-RTM-GTAV-PS4.zip` from the [Releases](../../releases) page and unzip it. Open `Arise - RTM.exe`, type the IP address of your PS4, then press **1. CONNECT PS4** and **2. CONNECT GTAV**.
-6. Go online, then use the tool. If the outfit list is empty, press **Refresh**.
+## Prérequis
+
+- PS4 sur **firmware 14.00**, jailbreak via GoldHEN.
+- GTA V **1.57**, EU (`CUSA00411`) ou US (`CUSA00419`).
+- PC Windows sur le même réseau que la console, avec .NET Framework 4.8.1.
+
+Testé sur firmware 14.00 avec GTA V 1.57 (EU).
+
+## Compilation
+
+Projet C# Windows Forms ciblant **.NET Framework 4.8.1** (SDK-style) :
+
+```sh
+dotnet build "Arise - RTM.csproj" -c Release
+```
+
+Le résultat est produit dans `bin/Release/net481/` (`Arise - RTM.exe`). Les fichiers de configuration (`profile.ini`, `offsets.ini`), les exemples (`outfit_example.txt`, `stats_example.txt`, `preset_max_tout.txt`, dossier `exemples\`), la documentation, les licences et `ps4debug.bin` sont copiés à côté de l'exécutable. `teleports.txt`, `connection.txt`, `signatures.ini` et `ui.txt` sont créés au premier lancement et ne sont pas versionnés.
+
+## Utilisation
+
+1. PS4 sur firmware **14.00**.
+2. Sur la console, ouvre https://well0nez.github.io/afterglow-web/ et jailbreak.
+3. Dans GoldHEN, ouvre **Server Settings** et active **FTP** + **Payload Loader**.
+4. Lance GTA V.
+5. Ouvre `Arise - RTM.exe`, tape l'IP de la PS4, puis clique **1. CONNECTER PS4** et **2. CONNECTER GTA V**.
+6. Passe en ligne, puis utilise l'outil. Si la liste des tenues est vide, clique **Rafraîchir**.
 
 ### Notes
 
-- The outfit editor works on the character currently loaded in the game. Press **Refresh** after going online or after changing character.
-- Fast run and K/D need **Character 1** or **Character 2** chosen in the toolbar: the buttons stay disabled until then. Change session to see the new values.
-- Debug tab: values are written straight to the game, with no check. A wrong value or list can damage your character or your account, so use lists from sources you trust. "Check a list" reads a file and tells you what is in it without writing anything. A long list shows its progress and can be stopped with **Cancel**.
-- `ps4debug.bin` is sent to the console automatically when it is not running yet.
-- To look at the whole window without a console, start it with `--preview`. Nothing can be written in that mode.
-- The FTP port is used only to read the game version from the console, so the tool can check that it is 1.57.
-- Use it at your own risk.
+- L'éditeur de tenues travaille sur le personnage actuellement chargé en jeu. Clique **Rafraîchir** après être passé en ligne ou avoir changé de personnage.
+- Fast run, compétences, K/D et niveau : choisis **Personnage 1** ou **Personnage 2** dans la barre d'outils — les boutons restent désactivés sinon. Les téléports et l'éditeur de tenues utilisent le personnage chargé en jeu.
+- Onglet Debug : les valeurs sont écrites directement au jeu, sans aucune vérification. Une valeur ou une liste erronée peut abîmer ton personnage ou ton compte, alors n'utilise que des listes de sources de confiance. « Vérifier une liste » analyse le fichier sans rien écrire. Une longue liste affiche sa progression et peut être arrêtée via **Annuler**.
+- `ps4debug.bin` est envoyé automatiquement à la console s'il n'y tourne pas déjà.
+- Pour visualiser la fenêtre sans console, lance avec `--preview`. Rien ne peut être écrit dans ce mode.
+- Le port FTP n'est utilisé que pour lire la version du jeu depuis la console (confirmation 1.57).
+- **Vie privée** : l'outil crée quelques fichiers à côté de l'exécutable. `connection.txt` mémorise l'IP de ta console, `rtm.log` et `ui.txt` contiennent le journal et l'état de l'interface, `signatures.ini` les signatures apprises, `teleports.txt` tes lieux et `tenues_export.txt` tes exports. Rien n'est envoyé sur Internet ; supprime ces fichiers avant de partager ou d'archiver le dossier.
+- À utiliser à tes propres risques.
 
-## Debug tab
+## Preset max tout
 
-For advanced users. Values are written straight to the game, with no check, so a wrong value can damage your character or your account.
+Un fichier `preset_max_tout.txt` est livré à côté de l'exécutable. Il regroupe fast run + 7 compétences au max + état psychiatrique + rang 120 + K/D 6.66 (20 écritures). À charger via l'onglet Debug → « Exécuter une liste... ». Chaque ligne est commentée pour que tu puisses adapter.
 
-- **Character**: your two characters are called `MP0_` (Character 1) and `MP1_` (Character 2) in the game. Choose one at the top of the tab or in the toolbar: it is the same choice.
-- **Set a stat / Read a stat**: type the name without the prefix, for example `CHAR_ABILITY_1_UNLCK`. *Character stat* adds `MP0_` or `MP1_` for you, *Account stat* adds `MPPLY_`, *Exact name* uses what you typed. The line "Will use" shows the full name. Pick the type that matches the stat: **int** is a whole number, **bool** is true / false, **float** is a decimal number.
-- **Packed value**: a flag (or a small number) stored by its number, the index, instead of by a name. It belongs to the chosen character.
-- **Run a list from a file**: a `.txt` file from your PC, one write per line (`stats_example.txt` shows it). **Check a list** reads it and tells you what is inside without writing anything. **Run a list** asks for confirmation, shows its progress and can be stopped with **Cancel**.
+## Fichiers d'exemple
 
-```
-int    MP_CHAR_ABILITY_1_UNLCK   -1       a stat, 32-bit integer
-bool   MP_SOME_STAT              true     true / false (or 1 / 0)
-float  MPPLY_SOME_STAT           6.66     a decimal number
-pbool  1234                      true     a packed flag by index
-pint   1234                      5        a packed integer by index
-```
+Le dossier `exemples\`, livré à côté de l'exécutable, contient des listes prêtes à charger dans l'onglet Debug :
 
-`MP_` at the start of a name means the character you chose. Any other name is used as typed. `#` starts a comment.
+- `stats_competences_100.txt` — les 7 compétences à 100.
+- `stats_competences_50.txt` — les 7 compétences à 50 (jauges à moitié remplies dans le menu pause).
+- `stats_verification.txt` — fichier volontairement erroné pour tester « Vérifier une liste (n'écrit rien) » : l'outil doit signaler 4 problèmes et n'écrire aucune stat.
 
-## Credits
+Va dans **Debug**, puis utilise **« Vérifier une liste (n'écrit rien) »** ou **« Exécuter une liste... »** et choisis le fichier. Les commentaires de chaque fichier rappellent le format et les précautions.
 
-- **yAmethxst**: the tool. [X](https://x.com/yAmethxst) · [Discord](https://amethxst.dev/discord)
-- **ps4debug-NG** by OpenSourcerer (OSR), maintained by Pharaoh2k: https://github.com/Pharaoh2k/ps4debug-NG. `ps4debug.bin` is v1.3.3 of this payload, licensed GPL-3.0. Its own thanks go to golden, Ctn, SiSTRo, DeathRGH and Pharaoh2k.
-- **GoldHEN** by SiSTRo: https://ko-fi.com/sistro/shop
-- **afterglow** by well0nez/m0zz: https://well0nez.github.io/afterglow-web/
-- `libdebug`: the C# client library used to talk to ps4debug, by golden (jogolden): https://github.com/jogolden/ps4debug
+## Crédits
 
-Full details in [CREDITS.txt](CREDITS.txt).
+- **yAmethxst** — outil original Arise - RTM. [X](https://x.com/yAmethxst) · [Discord](https://amethxst.dev/discord)
+- **Zitoune** — fork FR, nouvelles options (niveau, téléports, compétences, export), nettoyage de l'interface, bascule GPL-3.0. [Site](https://zitouneanticip.fr) · [YouTube](https://youtube.com/@Zitoune-anticip-WIN32) · [Twitch](https://twitch.tv/zitouneanticip) · [Discord](https://discord.gg/yBduvdrgHA)
+- **ps4debug-NG** par OpenSourcerer (OSR), maintenu par Pharaoh2k : https://github.com/Pharaoh2k/ps4debug-NG. `ps4debug.bin` est la v1.3.3 de ce payload, sous GPL-3.0. Remerciements : golden, Ctn, SiSTRo, DeathRGH et Pharaoh2k.
+- **GoldHEN** par SiSTRo : https://ko-fi.com/sistro/shop
+- **afterglow** par well0nez/m0zz : https://well0nez.github.io/afterglow-web/
+- **libdebug** — bibliothèque cliente C# pour ps4debug, par golden (jogolden) : https://github.com/jogolden/ps4debug. Le dépôt amont ne déclare aucune licence : le code reste la propriété de son auteur. Le fork y a apporté des modifications limitées (UTF-8 des notifications, garde-fous de flux), documentées dans CREDITS.txt.
 
-## License
+Détails complets dans [CREDITS.txt](CREDITS.txt).
 
-The code of this tool is under the [MIT License](LICENSE): use it and change it freely, but keep the copyright notice ("Copyright (c) 2026 yAmethxst") if you reuse it. The third-party material listed above keeps its own terms.
+## Licence
 
-Grand Theft Auto, GTA, Rockstar Games and PlayStation are trademarks of their respective owners. This tool is not affiliated with or endorsed by Rockstar Games, Take-Two Interactive or Sony.
+Le code propre à ce fork est distribué sous la **[GNU General Public License v3.0](LICENSE)** : tu peux l'utiliser, le modifier et le redistribuer, mais tu dois garder cette licence et fournir le code source de toute version modifiée que tu distribues.
+
+Le code d'origine de yAmethxst reste sous **licence MIT** : son avis de copyright est conservé dans [LICENSE-MIT](LICENSE-MIT) et doit accompagner toute copie. `libdebug` reste la propriété de son auteur (aucune licence déclarée) ; le fork y a apporté des modifications limitées, documentées dans CREDITS.txt. `ps4debug.bin` est sous GPL-3.0, avec sa source dans le dépôt amont.
+
+Grand Theft Auto, GTA, Rockstar Games et PlayStation sont des marques de leurs propriétaires respectifs. Cet outil n'est ni affilié ni approuvé par Rockstar Games, Take-Two Interactive ou Sony.

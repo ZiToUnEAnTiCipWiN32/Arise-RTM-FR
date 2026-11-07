@@ -1,3 +1,12 @@
+/*
+ * Arise - RTM (GTA V 1.57) - FR
+ * Copyright (C) 2026 yAmethxst — code d'origine
+ * Copyright (C) 2026 Zitoune — modifications du fork
+ *
+ * Ce fichier est distribué sous GNU GPL v3 (voir LICENSE). Les parties issues
+ * de l'outil d'origine restent sous licence MIT (voir LICENSE-MIT).
+ */
+
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -18,11 +27,14 @@ namespace Arise_RTM
         private const string GameProcessName = "eboot.bin";
         private const string XUrl = "https://x.com/yAmethxst";
         private const string DiscordUrl = "https://amethxst.dev/discord";
+        private const string ZitouneSiteUrl = "https://zitouneanticip.fr";
 
         private const int PanelHeight = OutfitsPanel.DesiredHeight;
         private const int TabHeaderHeight = 28;
         private const int WindowHeightWithLog = 938;
         private const int WindowHeightWithoutLog = 870;
+        private const int DefaultClientWidth = 1024;
+        private const int ShellBottomReserve = 130;
 
         private sealed class TimedResult<T>
         {
@@ -34,6 +46,15 @@ namespace Arise_RTM
         {
             public bool Passed;
             public string Failure;
+        }
+
+        private sealed class UiPreferences
+        {
+            public bool LogVisible = true;
+            public bool HasBounds;
+            public Rectangle Bounds;
+            public bool Maximized;
+            public int Tab;
         }
 
         private readonly PS4Connection connection = new PS4Connection();
@@ -53,16 +74,21 @@ namespace Arise_RTM
         private Button connectPs4Button, connectGameButton, cancelButton;
         private Label firmwareLabel, titleIdLabel, patchLabel, preflightLabel, progressLabel, lockLabel;
         private Panel connectionGroup, characterGroup;
+        private Control topHost;
+        private Panel toolbar;
         private Panel lockOverlay;
+        private List<LinkLabel> creditLinks;
+        private Label creditAuthor;
         private RadioButton character1Button, character2Button;
         private CheckBox saveCheckBox, verifyCheckBox, confirmCheckBox, showLogCheckBox;
         private ThemedTabs tabs;
         private OutfitsPanel outfitsPanel;
         private DebugPanel debugPanel;
+        private ToolsPanel toolsPanel;
         private ProgressStrip progressBar;
         private ToolStripStatusLabel statusLabel;
 
-        /// <param name="preview">Unlocks the whole window without a console, to look at it; nothing can be written.</param>
+        /// <param name="preview">Débloque toute la fenêtre sans console, pour la regarder; rien n'est écrit.</param>
         public MainForm(bool preview = false)
         {
             previewMode = preview;
@@ -71,12 +97,14 @@ namespace Arise_RTM
             InitializeEngine();
             Theme.Apply(this);
             UpdateGate();
+            ApplyStartupBounds();
+            Shown += (s, e) => LayoutShell();
 
             if (previewMode)
             {
-                Text += " - preview";
-                Log("Preview mode: the window is unlocked without a console. Nothing can be sent to the game.");
-                SetStatus("Preview mode - no console connected", Color.DarkOrange);
+                Text += " - aperçu";
+                Log("Mode aperçu : la fenêtre est débloquée sans console. Rien ne peut être envoyé au jeu.");
+                SetStatus("Mode aperçu - aucune console connectée", Color.DarkOrange);
             }
         }
 
@@ -87,6 +115,8 @@ namespace Arise_RTM
         PS4Connection IToolHost.Connection => connection;
 
         int IToolHost.Slot => character1Button.Checked ? 0 : (character2Button.Checked ? 1 : -1);
+
+        bool IToolHost.IsBusy => busy;
 
         void IToolHost.ChooseCharacter(int slot)
         {
@@ -122,17 +152,17 @@ namespace Arise_RTM
             IToolHost host = this;
             if (busy || !gameReady)
             {
-                string reason = busy ? "another operation is running"
-                    : previewMode ? "preview mode: no console is connected"
-                    : "the game is not connected (connect to the PS4 and to GTAV first)";
-                Log($"'{title}' not started: {reason}.");
-                SetStatus($"'{title}' not started", Color.DarkOrange);
+                string reason = busy ? "une autre opération est en cours"
+                    : previewMode ? "mode aperçu : aucune console connectée"
+                    : "le jeu n'est pas connecté (connectez-vous à la PS4 puis à GTA V)";
+                Log($"« {title} » non démarrée : {reason}.");
+                SetStatus($"« {title} » non démarrée", Color.DarkOrange);
                 return;
             }
 
             if (needsCharacter && host.Slot < 0)
             {
-                MessageBox.Show("Choose Character 1 or Character 2 in the toolbar first.", "Character", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("Choisissez Personnage 1 ou Personnage 2 dans la barre d'outils d'abord.", "Personnage", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
@@ -140,12 +170,12 @@ namespace Arise_RTM
             string missing = required.FirstOrDefault(handler => !engine.IsAvailable(handler));
             if (missing != null)
             {
-                Log($"'{title}' needs the handler '{missing}', which is unavailable on this build.");
-                SetStatus($"'{title}' unavailable on this build", Color.DarkOrange);
+                Log($"« {title} » a besoin du handler « {missing} », indisponible sur ce build.");
+                SetStatus($"« {title} » indisponible sur ce build", Color.DarkOrange);
                 return;
             }
 
-            string who = character1Button.Checked ? "Character 1" : "Character 2";
+            string who = character1Button.Checked ? "Personnage 1" : "Personnage 2";
             bool askToApply = confirmDetails != null || (changesStats && confirmCheckBox.Checked);
             List<string> unverified = required.Concat(optionalHandlers)
                 .Distinct()
@@ -154,16 +184,16 @@ namespace Arise_RTM
 
             if (askToApply || unverified.Count > 0)
             {
-                string where = host.Slot >= 0 ? " on " + who : string.Empty;
+                string where = host.Slot >= 0 ? " sur " + who : string.Empty;
                 StringBuilder message = new StringBuilder(askToApply
-                    ? $"{(changesStats ? "Apply" : "Run")} '{title}'{where}?\n\n{confirmDetails ?? "This changes your stats."}"
-                    : $"Run '{title}'{where}?");
+                    ? $"{(changesStats ? "Appliquer" : "Exécuter")} « {title} »{where} ?\n\n{confirmDetails ?? "Cette action modifie vos stats."}"
+                    : $"Exécuter « {title} »{where} ?");
 
                 if (unverified.Count > 0)
-                    message.Append("\n\nFirst run on this build: the game has not been checked with " + string.Join(", ", unverified) +
-                                   " yet. If something is wrong, the game may crash.");
+                    message.Append("\n\nPremière exécution sur ce build : le jeu n'a pas encore été vérifié avec " + string.Join(", ", unverified) +
+                                   ". Si quelque chose cloche, le jeu peut planter.");
 
-                if (!host.Confirm(message.ToString(), "Confirm"))
+                if (!host.Confirm(message.ToString(), "Confirmation"))
                     return;
             }
 
@@ -173,9 +203,9 @@ namespace Arise_RTM
                 int currentPid = await Task.Run(() => connection.FindProcessID(GameProcessName));
                 if (currentPid != gamePid)
                 {
-                    Log("The GTA V process changed or closed. Connect to the game again.");
+                    Log("Le process GTA V a changé ou s'est fermé. Reconnectez-vous au jeu.");
                     ResetGameState();
-                    SetStatus("Game restarted - reconnect to GTAV", Color.DarkOrange);
+                    SetStatus("Jeu redémarré - reconnectez GTA V", Color.DarkOrange);
                     return;
                 }
 
@@ -190,14 +220,14 @@ namespace Arise_RTM
                     Cancel = cancellation.Token
                 };
 
-                Log(context.Slot >= 0 ? $"Running '{title}' on MP{context.Slot}, verify={context.Verify}, save={context.Save}." : $"Running '{title}'.");
+                Log(context.Slot >= 0 ? $"Exécution « {title} » sur MP{context.Slot}, vérif={context.Verify}, enregistrement={context.Save}." : $"Exécution « {title} ».");
                 OptionResult result = await Task.Run(() => work(context));
 
-                Log($"'{title}' done: {result.Summary}.");
+                Log($"« {title} » terminé : {result.Summary}.");
                 if (result.IsClean)
                     await Task.Run(() => engine.CommitSignatures());
 
-                SetStatus(result.IsClean ? $"'{title}' applied" : $"'{title}' finished: {result.Summary}",
+                SetStatus(result.IsClean ? $"« {title} » appliqué" : $"« {title} » terminé : {result.Summary}",
                     result.IsClean ? Color.Green : Color.DarkOrange);
 
                 if (result.IsClean && changesStats)
@@ -205,13 +235,19 @@ namespace Arise_RTM
             }
             catch (OperationCanceledException)
             {
-                Log($"'{title}' cancelled. What is already written stays written.");
-                SetStatus($"'{title}' cancelled", Color.DarkOrange);
+                Log($"« {title} » annulé. Ce qui est déjà écrit reste écrit.");
+                SetStatus($"« {title} » annulé", Color.DarkOrange);
             }
             catch (Exception ex)
             {
-                Log("ERROR: " + ex.Message);
-                SetStatus($"'{title}' failed", Color.Red);
+                Log("ERREUR : " + ex.Message);
+                if (IsProtocolFailure(ex))
+                {
+                    ResetSession("Connexion PS4 désynchronisée - reconnectez la PS4", Color.Red);
+                    return;
+                }
+
+                SetStatus($"« {title} » a échoué", Color.Red);
             }
             finally
             {
@@ -219,7 +255,7 @@ namespace Arise_RTM
             }
         }
 
-        // ---- operation lock -------------------------------------------------------------
+        // ---- verrou d'opération ---------------------------------------------------------
 
         private void BeginOperation(string title)
         {
@@ -237,7 +273,7 @@ namespace Arise_RTM
             busy = false;
             progressBar.Indeterminate = false;
             progressBar.Value = 0;
-            progressLabel.Text = "Idle";
+            progressLabel.Text = "Inactif";
             cancelButton.Enabled = false;
             cancellation?.Dispose();
             cancellation = null;
@@ -275,30 +311,34 @@ namespace Arise_RTM
             lockOverlay.Visible = !usable || busy;
 
             if (busy)
-                lockLabel.Text = "Working: " + operationTitle;
+                lockLabel.Text = "En cours : " + operationTitle;
             else
-                lockLabel.Text = "Connect to the PS4 and to GTAV first.";
+                lockLabel.Text = "Connectez-vous d'abord à la PS4 puis à GTA V.";
 
             Theme.StyleToggle(character1Button);
             Theme.StyleToggle(character2Button);
             outfitsPanel?.SetCharacterChosen(((IToolHost)this).Slot >= 0);
             debugPanel?.SetCharacter(((IToolHost)this).Slot);
+            toolsPanel?.SetCharacterChosen(((IToolHost)this).Slot >= 0);
         }
 
         // ---- UI -------------------------------------------------------------------------
 
         private void BuildUi()
         {
-            Text = "Arise - RTM (GTA V 1.57)";
-            FormBorderStyle = FormBorderStyle.FixedSingle;
-            MaximizeBox = false;
+            Text = "Arise - RTM (GTA V 1.57) - FR";
+            FormBorderStyle = FormBorderStyle.Sizable;
+            MaximizeBox = true;
             StartPosition = FormStartPosition.CenterScreen;
-            ClientSize = new Size(1000, WindowHeightWithLog);
+            bool showLog = LoadLogPreference();
+            ClientSize = new Size(DefaultClientWidth, showLog ? WindowHeightWithLog : WindowHeightWithoutLog);
             BackColor = Theme.Bg;
             ForeColor = Theme.Text;
             Font = Theme.Body;
 
-            Panel banner = new Panel { Dock = DockStyle.Top, Height = 36, BackColor = Color.FromArgb(8, 8, 8), Tag = "keep" };
+            topHost = new Panel { Dock = DockStyle.Top, Height = 110, BackColor = Theme.Bg, Tag = "keep" };
+
+            Panel banner = new Panel { Location = new Point(0, 0), Size = new Size(DefaultClientWidth, 36), BackColor = Color.FromArgb(8, 8, 8), Tag = "keep" };
             banner.Paint += (s, e) =>
             {
                 using (Brush accent = new SolidBrush(Theme.Yellow))
@@ -309,62 +349,71 @@ namespace Arise_RTM
                 Text = "Arise - RTM", AutoSize = true, Location = new Point(10, 8),
                 Font = new Font("Segoe UI", 11f, FontStyle.Bold), ForeColor = Theme.Text
             });
-            firmwareLabel = BannerInfo("FW: N/D", 200);
-            titleIdLabel = BannerInfo("Title ID: N/D", 280);
-            patchLabel = BannerInfo("Patch: N/D", 480);
-            preflightLabel = BannerInfo("Preflight: not run", 570);
+            firmwareLabel = BannerInfo("Firmware : N/D", 200);
+            titleIdLabel = BannerInfo("Title ID : N/D", 320);
+            patchLabel = BannerInfo("Version : N/D", 480);
+            preflightLabel = BannerInfo("Précontrôle : non lancé", 570);
             banner.Controls.AddRange(new Control[] { firmwareLabel, titleIdLabel, patchLabel, preflightLabel });
             AddCredits(banner);
-            Controls.Add(banner);
+            topHost.Controls.Add(banner);
 
-            Panel toolbar = new Panel { Location = new Point(0, 36), Size = new Size(1000, 74), BackColor = Theme.Bg };
+            toolbar = new Panel { Location = new Point(0, 36), Height = 70, BackColor = Theme.Bg };
             toolbar.Paint += (s, e) =>
             {
                 using (Pen line = new Pen(Theme.Line))
                     e.Graphics.DrawLine(line, 0, toolbar.Height - 1, toolbar.Width, toolbar.Height - 1);
             };
 
-            connectionGroup = new Panel { Location = new Point(8, 4), Size = new Size(984, 32), BackColor = Theme.Bg };
-            connectionGroup.Controls.Add(NewLabel("PS4 IP", 0, 9));
-            ipTextBox = new TextBox { Location = new Point(46, 6), Size = new Size(120, 21) };
+            connectionGroup = new Panel { Location = new Point(8, 4), Height = 28, BackColor = Theme.Bg };
+            connectionGroup.Controls.Add(NewLabel("IP PS4", 0, 0));
+            ipTextBox = new TextBox { Size = new Size(120, 21) };
             connectionGroup.Controls.Add(ipTextBox);
-            connectionGroup.Controls.Add(NewLabel("Payload", 178, 9));
-            payloadPortTextBox = new TextBox { Location = new Point(226, 6), Size = new Size(46, 21), Text = "9090" };
+            connectionGroup.Controls.Add(NewLabel("Payload", 0, 0));
+            payloadPortTextBox = new TextBox { Size = new Size(46, 21), Text = "9090" };
             connectionGroup.Controls.Add(payloadPortTextBox);
-            connectionGroup.Controls.Add(NewLabel("FTP", 284, 9));
-            ftpPortTextBox = new TextBox { Location = new Point(308, 6), Size = new Size(46, 21), Text = "2121" };
+            connectionGroup.Controls.Add(NewLabel("FTP", 0, 0));
+            ftpPortTextBox = new TextBox { Size = new Size(46, 21), Text = "2121" };
             connectionGroup.Controls.Add(ftpPortTextBox);
 
-            connectPs4Button = new TileButton { Text = "1. CONNECT PS4", Location = new Point(372, 4), Size = new Size(180, 24), Primary = true, Centered = true };
+            connectPs4Button = new TileButton { Text = "1. CONNECTER PS4", Size = new Size(180, 24), Primary = true, Centered = true };
             connectPs4Button.Click += ConnectPs4Button_Click;
-            connectGameButton = new TileButton { Text = "2. CONNECT GTAV", Location = new Point(558, 4), Size = new Size(180, 24), Primary = true, Centered = true, Enabled = false };
+            connectGameButton = new TileButton { Text = "2. CONNECTER GTA V", Size = new Size(180, 24), Primary = true, Centered = true, Enabled = false };
             connectGameButton.Click += ConnectGameButton_Click;
             connectionGroup.Controls.AddRange(new Control[] { connectPs4Button, connectGameButton });
 
-            showLogCheckBox = new CheckBox { Text = "Show log", Location = new Point(880, 7), Size = new Size(100, 20), Checked = LoadLogPreference() };
+            showLogCheckBox = new CheckBox { Text = "Afficher le journal", Size = new Size(130, 20), Checked = showLog };
             showLogCheckBox.CheckedChanged += (s, e) => ApplyLogVisibility();
             connectionGroup.Controls.Add(showLogCheckBox);
-            toolbar.Controls.Add(connectionGroup);
 
-            characterGroup = new Panel { Location = new Point(8, 38), Size = new Size(984, 32), BackColor = Theme.Bg, Enabled = false };
-            characterGroup.Controls.Add(NewLabel("Stats character", 0, 9));
-            Panel characterPanel = new Panel { Location = new Point(96, 4), Size = new Size(244, 26), BackColor = Theme.Bg };
-            character1Button = Toggle("Character 1", 0, 0, 120);
-            character2Button = Toggle("Character 2", 124, 0, 120);
+            characterGroup = new Panel { Location = new Point(8, 36), Height = 28, BackColor = Theme.Bg, Enabled = false };
+            characterGroup.Controls.Add(NewLabel("Personnage", 0, 0));
+            Panel characterPanel = new Panel { Size = new Size(244, 26), BackColor = Theme.Bg };
+            character1Button = Toggle("Personnage 1", 0, 0, 120);
+            character2Button = Toggle("Personnage 2", 124, 0, 120);
             characterPanel.Controls.AddRange(new Control[] { character1Button, character2Button });
             characterGroup.Controls.Add(characterPanel);
 
-            saveCheckBox = new CheckBox { Text = "Save after write", Location = new Point(480, 7), Size = new Size(130, 20), Checked = true };
-            verifyCheckBox = new CheckBox { Text = "Verify read-back (slow)", Location = new Point(616, 7), Size = new Size(150, 20) };
-            confirmCheckBox = new CheckBox { Text = "Ask before applying", Location = new Point(772, 7), Size = new Size(150, 20), Checked = true };
+            saveCheckBox = new CheckBox { Text = "Enregistrer après écriture", Size = new Size(170, 20), Checked = true };
+            verifyCheckBox = new CheckBox { Text = "Vérifier après écriture (lent)", Size = new Size(200, 20) };
+            confirmCheckBox = new CheckBox { Text = "Demander avant d'appliquer", Size = new Size(180, 20), Checked = true };
             characterGroup.Controls.AddRange(new Control[] { saveCheckBox, verifyCheckBox, confirmCheckBox });
-            toolbar.Controls.Add(characterGroup);
-            Controls.Add(toolbar);
 
-            tabs = new ThemedTabs { Location = new Point(8, 114), Size = new Size(984, PanelHeight + TabHeaderHeight) };
+            toolbar.Controls.Add(connectionGroup);
+            toolbar.Controls.Add(characterGroup);
+            topHost.Controls.Add(toolbar);
+            Controls.Add(topHost);
+
+            tabs = new ThemedTabs
+            {
+                Location = new Point(8, 114),
+                Size = new Size(984, PanelHeight + TabHeaderHeight),
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Bottom | AnchorStyles.Right
+            };
             outfitsPanel = new OutfitsPanel(this);
+            toolsPanel = new ToolsPanel(this);
             debugPanel = new DebugPanel(this);
             tabs.AddPage(outfitsPanel);
+            tabs.AddPage(toolsPanel);
             tabs.AddPage(debugPanel);
             Controls.Add(tabs);
 
@@ -373,14 +422,33 @@ namespace Arise_RTM
                 Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleCenter, ForeColor = Theme.Muted,
                 Font = new Font("Segoe UI", 11f, FontStyle.Bold), BackColor = Theme.Bg
             };
-            lockOverlay = new Panel { Location = new Point(8, 114 + TabHeaderHeight), Size = new Size(984, PanelHeight), BackColor = Theme.Bg, Tag = "keep" };
+            lockOverlay = new Panel
+            {
+                Location = new Point(8, 114 + TabHeaderHeight),
+                Size = new Size(984, PanelHeight),
+                BackColor = Theme.Bg,
+                Tag = "keep",
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Bottom | AnchorStyles.Right
+            };
             lockOverlay.Controls.Add(lockLabel);
             Controls.Add(lockOverlay);
             lockOverlay.BringToFront();
 
-            progressLabel = new Label { Text = "Idle", Location = new Point(8, 814), Size = new Size(984, 14), ForeColor = Theme.Muted };
-            progressBar = new ProgressStrip { Location = new Point(8, 832), Size = new Size(862, 6) };
-            cancelButton = new TileButton { Text = "Cancel", Location = new Point(878, 823), Size = new Size(114, 22), Centered = true, Enabled = false };
+            progressLabel = new Label
+            {
+                Text = "Inactif", Location = new Point(8, 814), Size = new Size(984, 14), ForeColor = Theme.Muted,
+                Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom
+            };
+            progressBar = new ProgressStrip
+            {
+                Location = new Point(8, 832), Size = new Size(862, 6),
+                Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom
+            };
+            cancelButton = new TileButton
+            {
+                Text = "Annuler", Location = new Point(878, 823), Size = new Size(114, 22), Centered = true, Enabled = false,
+                Anchor = AnchorStyles.Right | AnchorStyles.Bottom
+            };
             cancelButton.Click += (s, e) => cancellation?.Cancel();
             Controls.AddRange(new Control[] { progressLabel, progressBar, cancelButton });
 
@@ -389,59 +457,167 @@ namespace Arise_RTM
                 Location = new Point(8, 852), Size = new Size(984, 62),
                 Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical,
                 Font = Theme.Mono, BackColor = Color.FromArgb(11, 11, 11), ForeColor = Color.FromArgb(190, 190, 190),
-                BorderStyle = BorderStyle.FixedSingle
+                BorderStyle = BorderStyle.FixedSingle,
+                Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom
             };
             Controls.Add(logTextBox);
-            ApplyLogVisibility(false);
+            ApplyLogVisibility(false, false);
 
             StatusStrip strip = new StatusStrip { BackColor = Theme.Bg };
-            statusLabel = new ToolStripStatusLabel("STATUS: Idle") { ForeColor = Theme.Text };
+            statusLabel = new ToolStripStatusLabel("STATUT : Inactif") { ForeColor = Theme.Text };
             strip.Items.Add(statusLabel);
             Controls.Add(strip);
 
+            MinimumSize = new Size(760, 560);
+            outfitsPanel.AutoScroll = true;
+            toolsPanel.AutoScroll = true;
+            debugPanel.AutoScroll = true;
+
+            Resize += (s, e) => { LayoutToolbar(); LayoutShell(); };
+            topHost.SizeChanged += (s, e) => LayoutShell();
+            LayoutToolbar();
+            LayoutShell();
+
             FormClosing += (sender, args) =>
             {
+                SaveUiPreferences();
                 cancellation?.Cancel();
                 try { connection.Disconnect(); } catch { }
             };
         }
 
-        /// <summary>"by yAmethxst" with links to X, Discord and the credits file, right-aligned in the banner.</summary>
+        /// <summary>Place les contrôles de connexion et d'options ligne par ligne. Dès que la
+        /// largeur manque, la ligne suivante passe à la ligne et la barre d'outils grandit.</summary>
+        private void LayoutToolbar()
+        {
+            if (toolbar == null || topHost == null || connectionGroup == null || characterGroup == null)
+                return;
+
+            int width = topHost.ClientSize.Width;
+            if (width <= 0)
+                return;
+
+            if (topHost.Controls.Count > 0)
+                topHost.Controls[0].Width = width;
+            toolbar.Width = width;
+
+            const int gap = 10;
+            const int rowHeight = 30;
+            int contentWidth = Math.Max(0, width - 16);
+
+            int connectionHeight = LayoutFlow(connectionGroup, contentWidth, rowHeight, gap);
+            connectionGroup.Location = new Point(8, 4);
+
+            int characterHeight = LayoutFlow(characterGroup, contentWidth, rowHeight, gap);
+            characterGroup.Location = new Point(8, 4 + connectionHeight + 4);
+
+            toolbar.Height = 4 + connectionHeight + 4 + characterHeight + 4;
+            topHost.Height = 36 + toolbar.Height;
+        }
+
+        private static int LayoutFlow(Panel host, int width, int rowHeight, int gap)
+        {
+            host.Width = width;
+            int x = 0;
+            int row = 0;
+
+            foreach (Control child in host.Controls)
+            {
+                if (x > 0 && x + child.Width > width)
+                {
+                    x = 0;
+                    row++;
+                }
+
+                child.Location = new Point(x, row * rowHeight + Math.Max(0, (rowHeight - child.Height) / 2));
+                x += child.Width + gap;
+            }
+
+            host.Height = (row + 1) * rowHeight;
+            return host.Height;
+        }
+
+        /// <summary>Aligne l'onglet et son voile sur le bas réel de la barre d'outils, qui peut
+        /// grandir quand les lignes de connexion/options passent à la ligne.</summary>
+        private void LayoutShell()
+        {
+            if (topHost == null || tabs == null || lockOverlay == null)
+                return;
+
+            int top = topHost.Bottom;
+            int width = Math.Max(0, ClientSize.Width - 16);
+            int height = Math.Max(0, ClientSize.Height - ShellBottomReserve - top);
+            tabs.SetBounds(8, top, width, height);
+            lockOverlay.SetBounds(8, top + TabHeaderHeight, width, Math.Max(0, height - TabHeaderHeight));
+        }
+
+        /// <summary>Liens cliquables + mention d'auteur, positionnés à droite du bandeau et
+        /// repositionnés à chaque redimensionnement de la fenêtre. 4 liens seulement :
+        /// les autres (YouTube Z, Twitch Z, Discord Z) sont dans CREDITS.txt.</summary>
         private void AddCredits(Panel banner)
         {
-            const int right = 990;
             const int gap = 10;
+            const int rightPad = 10;
+
             (string Text, Action Open)[] items =
             {
-                ("Credits", OpenCreditsFile),
-                ("Discord", () => LinkOpener.Open(DiscordUrl, Log)),
-                ("X", () => LinkOpener.Open(XUrl, Log))
+                ("Crédits",  OpenCreditsFile),
+                ("Discord",  () => LinkOpener.Open(DiscordUrl, Log)),
+                ("X",        () => LinkOpener.Open(XUrl, Log)),
+                ("Site",     () => LinkOpener.Open(ZitouneSiteUrl, Log))
             };
 
-            int x = right;
+            List<LinkLabel> links = new List<LinkLabel>(items.Length);
             foreach ((string text, Action open) in items)
             {
                 LinkLabel link = new LinkLabel
                 {
                     Text = text, AutoSize = true, LinkColor = Theme.Yellow, ActiveLinkColor = Theme.YellowHover,
-                    VisitedLinkColor = Theme.Yellow, LinkBehavior = LinkBehavior.HoverUnderline, BackColor = banner.BackColor,
-                    Cursor = Cursors.Hand
+                    VisitedLinkColor = Theme.Yellow, LinkBehavior = LinkBehavior.HoverUnderline,
+                    BackColor = banner.BackColor, Cursor = Cursors.Hand,
+                    Location = new Point(0, 11)
                 };
-                link.Location = new Point(0, 11);
-                banner.Controls.Add(link);
-                x -= link.PreferredWidth + gap;
-                link.Left = x;
                 link.LinkClicked += (s, e) => open();
+                banner.Controls.Add(link);
+                links.Add(link);
             }
 
             Label author = new Label
             {
-                Text = "by yAmethxst", AutoSize = true, ForeColor = Theme.Text, BackColor = banner.BackColor,
-                Font = new Font("Segoe UI", 8.25f, FontStyle.Bold)
+                Text = "yAmethxst / Zitoune",
+                AutoSize = true, ForeColor = Theme.Text, BackColor = banner.BackColor,
+                Font = new Font("Segoe UI", 8.25f, FontStyle.Bold),
+                Location = new Point(0, 11)
             };
-            author.Location = new Point(0, 11);
             banner.Controls.Add(author);
-            author.Left = x - author.PreferredWidth - gap;
+            creditLinks = links;
+            creditAuthor = author;
+
+            // Repositionne tous les crédits à droite, de droite à gauche, chaque fois que
+            // le bandeau change de largeur (donc chaque Resize de la fenêtre). Les éléments
+            // qui toucheraient les infos de gauche sont masqués plutôt que superposés.
+            Action layout = () =>
+            {
+                int minLeft = (preflightLabel != null && preflightLabel.Visible ? preflightLabel.Right : 0) + 8;
+                int x = banner.ClientSize.Width - rightPad;
+                for (int i = links.Count - 1; i >= 0; i--)
+                {
+                    int left = x - links[i].PreferredWidth;
+                    links[i].Visible = left >= minLeft;
+                    if (links[i].Visible)
+                    {
+                        links[i].Left = left;
+                        x = left - gap;
+                    }
+                }
+
+                int authorLeft = x - author.PreferredWidth;
+                author.Visible = authorLeft >= minLeft;
+                author.Left = authorLeft;
+            };
+            banner.Resize += (s, e) => layout();
+            banner.HandleCreated += (s, e) => layout();
+            layout();
         }
 
         private void OpenCreditsFile()
@@ -449,7 +625,7 @@ namespace Arise_RTM
             string path = Path.Combine(baseDirectory, "CREDITS.txt");
             if (!File.Exists(path))
             {
-                MessageBox.Show("CREDITS.txt was not found next to the tool.", "Credits", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("CREDITS.txt est introuvable à côté de l'exécutable.", "Crédits", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
@@ -489,11 +665,11 @@ namespace Arise_RTM
                 engine = new StatEngine(connection, profile, new SignatureStore(Path.Combine(baseDirectory, "signatures.ini")), Log);
 
                 bool hashOk = JenkinsHash.Joaat("adder") == 0xB779A091;
-                Log(hashOk ? "Hash self-test OK." : "Hash self-test FAILED.");
+                Log(hashOk ? "Auto-test hash OK." : "Auto-test hash ÉCHEC.");
                 if (!hashOk)
-                    throw new InvalidOperationException("Hash self-test failed.");
+                    throw new InvalidOperationException("Auto-test hash échoué.");
 
-                Log($"Profile {profile.GameVersion} loaded (address base 0x{profile.AddressBase:X}, {profile.Handlers.Count} handlers).");
+                Log($"Profil {profile.GameVersion} chargé (base 0x{profile.AddressBase:X}, {profile.Handlers.Count} handler(s)).");
 
                 try
                 {
@@ -502,24 +678,24 @@ namespace Arise_RTM
                 catch (Exception ex)
                 {
                     outfitsPanel.Enabled = false;
-                    Log("Outfits disabled: " + ex.Message);
+                    Log("Tenues désactivées : " + ex.Message);
                 }
             }
             catch (Exception ex)
             {
                 connectPs4Button.Enabled = false;
-                SetStatus("Configuration error", Color.Red);
-                MessageBox.Show($"Configuration error:\n{ex.Message}", "Arise - RTM", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                SetStatus("Erreur de configuration", Color.Red);
+                MessageBox.Show($"Erreur de configuration :\n{ex.Message}", "Arise - RTM", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        // ---- connection -----------------------------------------------------------------
+        // ---- connexion ------------------------------------------------------------------
 
         private async void ConnectPs4Button_Click(object sender, EventArgs e)
         {
             if (connection.IsConnected)
             {
-                ResetSession("Disconnected.");
+                ResetSession("Déconnecté.");
                 return;
             }
 
@@ -538,39 +714,39 @@ namespace Arise_RTM
             string ip = ipTextBox.Text.Trim();
             if (ip.Length == 0)
             {
-                MessageBox.Show("Enter the PS4 IP address.", "Missing Input", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Entrez l'adresse IP de la PS4.", "Saisie manquante", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            SetConnectionBusy(true, "CHECKING...");
+            SetConnectionBusy(true, "VÉRIFICATION...");
             try
             {
                 TimedResult<bool> debugCheck = await RunWithTimeoutAsync(() => connection.IsDebugActive(ip), ConnectionTimeoutMs);
                 if (debugCheck.TimedOut)
                 {
-                    FailPs4("Debug check timeout");
+                    FailPs4("Timeout vérification debug");
                     return;
                 }
 
                 if (!debugCheck.Value)
                 {
-                    connectPs4Button.Text = "INJECTING...";
+                    connectPs4Button.Text = "INJECTION...";
                     string payloadPath = Path.Combine(baseDirectory, "ps4debug.bin");
                     TimedResult<bool> payload = await RunWithTimeoutAsync(
                         () => connection.InjectPayload(ip, payloadPath, payloadPort), ConnectionTimeoutMs);
 
                     if (payload.TimedOut || !payload.Value)
                     {
-                        MessageBox.Show("Enable \"PayLoader Server\" in the GoldHEN settings (port 9090).",
-                            "Payload Not Available", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        FailPs4("Payload unreachable");
+                        MessageBox.Show("Activez « PayLoader Server » dans les paramètres GoldHEN (port 9090).",
+                            "Payload indisponible", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        FailPs4("Payload injoignable");
                         return;
                     }
 
                     await Task.Delay(1200);
                 }
 
-                connectPs4Button.Text = "CONNECTING...";
+                connectPs4Button.Text = "CONNEXION...";
                 TimedResult<bool> connect = await RunWithTimeoutAsync(() =>
                 {
                     connection.Connect(ip);
@@ -579,19 +755,19 @@ namespace Arise_RTM
 
                 if (connect.TimedOut || !connect.Value)
                 {
-                    FailPs4("PS4 connection timeout");
+                    FailPs4("Timeout connexion PS4");
                     return;
                 }
 
-                connection.Notify("Arise - RTM: Connected to PS4!");
-                firmwareLabel.Text = $"FW: {connection.GetConsoleFirmwareText()}";
-                SetStatus("Connected to PS4 - now connect to GTAV", Color.Green);
-                Log($"Connected to {ip}.");
+                connection.Notify("Arise - RTM : Connecté à la PS4 !");
+                firmwareLabel.Text = $"FW : {connection.GetConsoleFirmwareText()}";
+                SetStatus("Connecté à la PS4 - connectez maintenant GTA V", Color.Green);
+                Log($"Connecté à {ip}.");
             }
             catch (Exception ex)
             {
-                FailPs4("PS4 connection error");
-                Log("ERROR: " + ex.Message);
+                FailPs4("Erreur de connexion PS4");
+                Log("ERREUR : " + ex.Message);
             }
             finally
             {
@@ -602,14 +778,14 @@ namespace Arise_RTM
         private async Task ConnectToGameAsync(int payloadPort, int ftpPort)
         {
             string ip = ipTextBox.Text.Trim();
-            SetConnectionBusy(true, null, "CONNECTING GTAV...");
+            SetConnectionBusy(true, null, "CONNEXION GTA V...");
             try
             {
                 int pid = await Task.Run(() => connection.FindProcessID(GameProcessName));
                 if (pid <= 0)
                 {
-                    SetStatus("GTAV not found - start the game", Color.DarkOrange);
-                    MessageBox.Show("eboot.bin not found. Start the game.", "Not Found", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    SetStatus("GTA V introuvable - démarrez le jeu", Color.DarkOrange);
+                    MessageBox.Show("eboot.bin introuvable. Démarrez le jeu.", "Introuvable", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
 
@@ -617,55 +793,58 @@ namespace Arise_RTM
                 if (connection.TryGetProcessInfo(pid, out ProcessInfo processInfo))
                     titleId = CleanValue(processInfo.titleid);
 
-                titleIdLabel.Text = $"Title ID: {titleId} ({RegionOf(titleId)})";
+                titleIdLabel.Text = $"Title ID : {titleId} ({RegionOf(titleId)})";
                 if (!profile.AllowedTitleIds.Contains(titleId))
                 {
-                    FailGame($"Title ID {titleId} is not supported by this tool.");
+                    FailGame($"Title ID {titleId} non supporté par cet outil.");
                     return;
                 }
 
                 string patch = await DetectPatchAsync(ip, titleId, ftpPort);
                 if (patch.Length == 0)
                 {
-                    FailGame("Game version not confirmed.");
+                    FailGame("Version du jeu non confirmée.");
                     return;
                 }
 
-                patchLabel.Text = $"Patch: {patch}";
+                patchLabel.Text = $"Version : {patch}";
                 if (patch != profile.GameVersion)
                 {
-                    FailGame($"Game version {patch} is not supported (expected {profile.GameVersion}).");
+                    FailGame($"Version {patch} non supportée (attendu {profile.GameVersion}).");
                     return;
                 }
 
-                preflightLabel.Text = "Preflight: running...";
+                preflightLabel.Text = "Précontrôle : en cours...";
                 PreflightResult preflight = await Task.Run(() => RunPreflight(pid, titleId));
                 if (!preflight.Passed)
                 {
-                    preflightLabel.Text = "Preflight: FAILED";
-                    Log("PREFLIGHT FAILED: " + preflight.Failure);
-                    MessageBox.Show(preflight.Failure, "Preflight failed", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    FailGame("Preflight failed");
+                    preflightLabel.Text = "Précontrôle : ÉCHEC";
+                    Log("ÉCHEC DU PRÉCONTRÔLE : " + preflight.Failure);
+                    MessageBox.Show(preflight.Failure, "Précontrôle échoué", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    FailGame("Précontrôle échoué");
                     return;
                 }
 
                 gamePid = pid;
                 gameReady = true;
-                preflightLabel.Text = "Preflight: OK";
+                preflightLabel.Text = "Précontrôle : OK";
                 SaveConnectionInfo(ip, payloadPort, ftpPort);
                 outfitsPanel?.Attach(pid);
 
-                try { connection.Notify("Arise - RTM: GTAV connected"); } catch { }
+                try { connection.Notify("Arise - RTM : GTA V connecté"); } catch { }
 
                 bool coreVerified = HandlerKeys.Core.All(engine.IsVerified);
-                string verified = coreVerified ? "core verified" : "core UNVERIFIED (first run on this build)";
-                SetStatus($"GTA V found (PID {pid}) - {verified}.", coreVerified ? Color.Green : Color.DarkOrange);
-                Log($"GTA V {patch} {titleId} PID {pid}: preflight passed, {verified}.");
+                string verified = coreVerified ? "cœur vérifié" : "cœur NON VÉRIFIÉ (première exécution sur ce build)";
+                SetStatus($"GTA V trouvé (PID {pid}) - {verified}.", coreVerified ? Color.Green : Color.DarkOrange);
+                Log($"GTA V {patch} {titleId} PID {pid} : précontrôle réussi, {verified}.");
             }
             catch (Exception ex)
             {
-                FailGame("GTAV lookup error");
-                Log("ERROR: " + ex.Message);
+                Log("ERREUR : " + ex.Message);
+                if (IsProtocolFailure(ex))
+                    ResetSession("Connexion PS4 désynchronisée - reconnectez la PS4", Color.Red);
+                else
+                    FailGame("Erreur de détection GTA V");
             }
             finally
             {
@@ -685,18 +864,18 @@ namespace Arise_RTM
             string patch = ftp.TimedOut ? string.Empty : NormalizeVersion(ftp.Value);
             if (patch.Length > 0)
             {
-                Log($"Game version read from param.sfo: {patch}.");
+                Log($"Version du jeu lue depuis param.sfo : {patch}.");
                 return patch;
             }
 
             DialogResult answer = MessageBox.Show(
-                $"The game version could not be read via FTP.\nIs this GTA V {profile.GameVersion}?",
-                "Game version", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                $"La version du jeu n'a pas pu être lue via FTP.\nCette partie est-elle GTA V {profile.GameVersion} ?",
+                "Version du jeu", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
 
             if (answer != DialogResult.Yes)
                 return string.Empty;
 
-            Log($"Game version confirmed manually: {profile.GameVersion}.");
+            Log($"Version du jeu confirmée manuellement : {profile.GameVersion}.");
             return profile.GameVersion;
         }
 
@@ -729,7 +908,7 @@ namespace Arise_RTM
         {
             try { connection.Disconnect(); } catch { }
             ResetGameState();
-            firmwareLabel.Text = "FW: N/D";
+            firmwareLabel.Text = "FW : N/D";
             SetStatus(status, color ?? Color.Black);
             Log(status);
             SetConnectionBusy(false);
@@ -741,9 +920,9 @@ namespace Arise_RTM
             gameReady = false;
             gamePid = -1;
             outfitsPanel?.Detach();
-            titleIdLabel.Text = "Title ID: N/D";
-            patchLabel.Text = "Patch: N/D";
-            preflightLabel.Text = "Preflight: not run";
+            titleIdLabel.Text = "Title ID : N/D";
+            patchLabel.Text = "Version : N/D";
+            preflightLabel.Text = "Précontrôle : non lancé";
             UpdateGate();
         }
 
@@ -759,13 +938,13 @@ namespace Arise_RTM
 
             if (!working)
             {
-                connectPs4Button.Text = connection.IsConnected ? "DISCONNECT PS4" : "1. CONNECT PS4";
-                connectGameButton.Text = gameReady ? "GTAV CONNECTED (reconnect)" : "2. CONNECT GTAV";
+                connectPs4Button.Text = connection.IsConnected ? "DÉCONNECTER PS4" : "1. CONNECTER PS4";
+                connectGameButton.Text = gameReady ? "GTA V CONNECTÉ (reconnecter)" : "2. CONNECTER GTA V";
                 connectGameButton.Enabled = connection.IsConnected;
             }
         }
 
-        // ---- small helpers --------------------------------------------------------------
+        // ---- helpers --------------------------------------------------------------------
 
         private void SetStatus(string text, Color color)
         {
@@ -775,7 +954,10 @@ namespace Arise_RTM
                 return;
             }
 
-            statusLabel.Text = "STATUS: " + text;
+            if (statusLabel == null)
+                return;
+
+            statusLabel.Text = "STATUT : " + text;
             statusLabel.ForeColor = StatusColor(color);
         }
 
@@ -791,7 +973,8 @@ namespace Arise_RTM
             }
 
             string line = $"[{DateTime.Now:HH:mm:ss}] {message}";
-            logTextBox.AppendText(line + Environment.NewLine);
+            if (logTextBox != null)
+                logTextBox.AppendText(line + Environment.NewLine);
 
             try { File.AppendAllText(Path.Combine(baseDirectory, "rtm.log"), line + Environment.NewLine); }
             catch { }
@@ -802,13 +985,13 @@ namespace Arise_RTM
             ftpPort = 2121;
             if (!int.TryParse(payloadPortTextBox.Text.Trim(), out payloadPort) || payloadPort < 1 || payloadPort > 65535)
             {
-                MessageBox.Show("Invalid payload port.", "Invalid Input", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Port payload invalide.", "Saisie invalide", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return false;
             }
 
             if (!int.TryParse(ftpPortTextBox.Text.Trim(), out ftpPort) || ftpPort < 1 || ftpPort > 65535)
             {
-                MessageBox.Show("Invalid FTP port.", "Invalid Input", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Port FTP invalide.", "Saisie invalide", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return false;
             }
 
@@ -819,28 +1002,142 @@ namespace Arise_RTM
 
         private bool LoadLogPreference()
         {
+            return LoadUiPreferences().LogVisible;
+        }
+
+        private UiPreferences LoadUiPreferences()
+        {
+            UiPreferences prefs = new UiPreferences();
             try
             {
-                return !File.Exists(UiPreferencePath) || File.ReadAllText(UiPreferencePath).Trim() != "log=0";
+                if (!File.Exists(UiPreferencePath))
+                    return prefs;
+
+                foreach (string raw in File.ReadAllLines(UiPreferencePath))
+                {
+                    string line = raw.Trim();
+                    int separator = line.IndexOf('=');
+                    if (line.Length == 0 || line[0] == '#' || separator <= 0)
+                        continue;
+
+                    string key = line.Substring(0, separator).Trim().ToLowerInvariant();
+                    string value = line.Substring(separator + 1).Trim();
+
+                    switch (key)
+                    {
+                        case "log": prefs.LogVisible = value != "0"; break;
+                        case "max": prefs.Maximized = value == "1"; break;
+                        case "tab": if (int.TryParse(value, out int tab)) prefs.Tab = tab; break;
+                        case "x": if (int.TryParse(value, out int x)) { prefs.Bounds.X = x; prefs.HasBounds = true; } break;
+                        case "y": if (int.TryParse(value, out int y)) { prefs.Bounds.Y = y; prefs.HasBounds = true; } break;
+                        case "w": if (int.TryParse(value, out int w)) { prefs.Bounds.Width = w; prefs.HasBounds = true; } break;
+                        case "h": if (int.TryParse(value, out int h)) { prefs.Bounds.Height = h; prefs.HasBounds = true; } break;
+                    }
+                }
             }
             catch
             {
-                return true;
+            }
+
+            if (prefs.Bounds.Width < 320 || prefs.Bounds.Height < 240)
+                prefs.HasBounds = false;
+            return prefs;
+        }
+
+        private void SaveUiPreferences()
+        {
+            try
+            {
+                Rectangle bounds = WindowState == FormWindowState.Normal ? Bounds : RestoreBounds;
+                if (bounds.Width <= 0 || bounds.Height <= 0)
+                    bounds = Bounds;
+
+                StringBuilder text = new StringBuilder();
+                text.AppendLine("log=" + (showLogCheckBox != null && showLogCheckBox.Checked ? "1" : "0"));
+                text.AppendLine("max=" + (WindowState == FormWindowState.Maximized ? "1" : "0"));
+                text.AppendLine("tab=" + (tabs != null ? tabs.SelectedIndex : 0));
+                text.AppendLine("x=" + bounds.X);
+                text.AppendLine("y=" + bounds.Y);
+                text.AppendLine("w=" + bounds.Width);
+                text.AppendLine("h=" + bounds.Height);
+                File.WriteAllText(UiPreferencePath, text.ToString(), Encoding.UTF8);
+            }
+            catch
+            {
             }
         }
 
-        /// <summary>Hides or shows the log pane (the window shrinks or grows with it). The log is still written to rtm.log.</summary>
-        private void ApplyLogVisibility(bool save = true)
+        /// <summary>Restaure les bounds si l'écran existe toujours, sinon centre une fenêtre
+        /// qui tient dans la zone de travail (le format 1366x768 est le cas courant).</summary>
+        private void ApplyStartupBounds()
         {
-            bool show = showLogCheckBox.Checked;
-            logTextBox.Visible = show;
-            ClientSize = new Size(ClientSize.Width, show ? WindowHeightWithLog : WindowHeightWithoutLog);
+            UiPreferences prefs = LoadUiPreferences();
+            Rectangle work = Screen.PrimaryScreen.WorkingArea;
+            int maxWidth = Math.Max(320, work.Width - 16);
+            int maxHeight = Math.Max(240, work.Height - 16);
+            int minWidth = Math.Min(MinimumSize.Width, maxWidth);
+            int minHeight = Math.Min(MinimumSize.Height, maxHeight);
 
-            if (!save)
+            Rectangle bounds;
+            if (prefs.HasBounds && Screen.AllScreens.Any(screen => screen.WorkingArea.IntersectsWith(prefs.Bounds)))
+                bounds = prefs.Bounds;
+            else
+                bounds = new Rectangle(0, 0, Math.Max(Width, MinimumSize.Width), Math.Max(Height, MinimumSize.Height));
+
+            bounds.Width = Math.Max(minWidth, Math.Min(bounds.Width, maxWidth));
+            bounds.Height = Math.Max(minHeight, Math.Min(bounds.Height, maxHeight));
+
+            if (prefs.HasBounds)
+            {
+                if (bounds.Right > work.Right) bounds.X = work.Right - bounds.Width;
+                if (bounds.Bottom > work.Bottom) bounds.Y = work.Bottom - bounds.Height;
+                if (bounds.Left < work.Left) bounds.X = work.Left;
+                if (bounds.Top < work.Top) bounds.Y = work.Top;
+            }
+            else
+            {
+                bounds.X = work.Left + (work.Width - bounds.Width) / 2;
+                bounds.Y = work.Top + (work.Height - bounds.Height) / 2;
+            }
+
+            StartPosition = FormStartPosition.Manual;
+            Bounds = bounds;
+            if (prefs.Maximized)
+                WindowState = FormWindowState.Maximized;
+            if (prefs.Tab >= 0 && prefs.Tab <= 2)
+                tabs.SelectedIndex = prefs.Tab;
+            LayoutShell();
+        }
+
+        private void SetClientHeight(int desired)
+        {
+            int nonClient = Math.Max(0, Height - ClientSize.Height);
+            Rectangle work = Screen.FromControl(this).WorkingArea;
+            int minClient = Math.Max(200, MinimumSize.Height - nonClient);
+            int maxClient = Math.Max(minClient, work.Height - nonClient - 8);
+            int height = Math.Max(minClient, Math.Min(maxClient, desired));
+            ClientSize = new Size(ClientSize.Width, height);
+        }
+
+        /// <summary>Cache ou affiche le panneau de log sans écraser la hauteur choisie :
+        /// on applique seulement le delta, borné à la zone de travail.</summary>
+        private void ApplyLogVisibility(bool save = true, bool adjustHeight = true)
+        {
+            if (showLogCheckBox == null || logTextBox == null)
                 return;
 
-            try { File.WriteAllText(UiPreferencePath, show ? "log=1" : "log=0"); }
-            catch { }
+            bool show = showLogCheckBox.Checked;
+            logTextBox.Visible = show;
+
+            if (adjustHeight && WindowState == FormWindowState.Normal)
+            {
+                int delta = WindowHeightWithLog - WindowHeightWithoutLog;
+                SetClientHeight(ClientSize.Height + (show ? delta : -delta));
+            }
+
+            LayoutShell();
+            if (save)
+                SaveUiPreferences();
         }
 
         private void LoadConnectionInfo()
@@ -900,6 +1197,15 @@ namespace Arise_RTM
             return raw.Trim();
         }
 
+        /// <summary>Erreur qui laisse le flux ps4debug désynchronisé : la session doit être recréée.</summary>
+        private static bool IsProtocolFailure(Exception ex)
+        {
+            string message = ex?.Message ?? string.Empty;
+            return message.IndexOf("désynchron", StringComparison.OrdinalIgnoreCase) >= 0
+                || message.IndexOf("ps4debug", StringComparison.OrdinalIgnoreCase) >= 0
+                || message.IndexOf("libdbg status", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
         private static string RegionOf(string titleId)
         {
             switch (titleId.ToUpperInvariant())
@@ -907,7 +1213,7 @@ namespace Arise_RTM
                 case "CUSA00419": return "US";
                 case "CUSA00411": return "EU";
                 case "CUSA00880": return "JP";
-                default: return "UNKNOWN";
+                default: return "INCONNU";
             }
         }
     }

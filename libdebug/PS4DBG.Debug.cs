@@ -191,7 +191,7 @@ namespace libdebug {
                 sock.ReceiveTimeout = save;
 
                 return ExtFWVersion;
-            } catch (Exception ex) {
+            } catch (Exception) {
                 return 0;
             }
         }

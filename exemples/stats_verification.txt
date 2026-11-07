@@ -1,0 +1,17 @@
+# Arise - RTM — exemple de vérification de liste (onglet Debug)
+#
+# Ce fichier contient VOLONTAIREMENT des erreurs.
+# Utilise « Vérifier une liste (n'écrit rien) » : l'outil doit signaler
+# 4 problèmes (lignes 8, 11, 14 et 17) et n'écrire aucune statistique.
+#
+# Problème 1 : la valeur entière manque.
+int MP_SCRIPT_INCREASE_STAM
+#
+# Problème 2 : un booléen n'accepte que true/false ou 1/0.
+bool MP_SOME_STAT maybe
+#
+# Problème 3 : un nom de stat ne peut pas contenir de tiret.
+int MP-BAD 1
+#
+# Problème 4 : le type doit être int, bool, float, pbool ou pint.
+foo MP_X 1

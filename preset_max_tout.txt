@@ -1,0 +1,132 @@
+# ============================================================================
+# PRESET "MAX TOUT" — Arise-RTM
+# ============================================================================
+#
+# COMMENT UTILISER CE FICHIER :
+#   1. Ouvre Arise-RTM, connecte PS4 + GTA V, choisis Personnage 1 ou 2.
+#   2. Va dans l'onglet "Debug".
+#   3. Dans la section "Exécuter une liste depuis un fichier" en bas :
+#        - Clique "Vérifier une liste (n'écrit rien)" pour analyser ce fichier
+#          → il te dit combien d'écritures sont valides.
+#        - Clique "Exécuter une liste..." pour vraiment appliquer.
+#   4. Une confirmation s'affiche avec le détail. Accepte.
+#   5. La barre de progression monte, les écritures défilent dans le journal.
+#      Tu peux "Annuler" à tout moment, ce qui est déjà écrit reste écrit.
+#   6. Les valeurs apparaissent en jeu immédiatement (rang, compétences).
+#
+# ----------------------------------------------------------------------------
+# FORMAT D'UNE LIGNE :
+#
+#   type    nom_ou_index          valeur     # commentaire optionnel
+#
+#   - Un espace ou une tabulation sépare les 3 champs.
+#   - Tout ce qui suit un # est ignoré (commentaire).
+#   - Les lignes vides sont ignorées.
+#
+# TYPES DISPONIBLES :
+#
+#   int    = nombre entier 32 bits (-2 147 483 648 à 2 147 483 647)
+#   bool   = true / false (ou 1 / 0)
+#   float  = nombre décimal avec un point (ex: 6.66)
+#   pbool  = flag packed par INDEX numérique (true/false)
+#   pint   = entier packed par INDEX numérique
+#
+#   Un flag "packed" est un bit stocké par numéro plutôt que par nom.
+#   Pas besoin ici, mais utile pour certains achievements.
+#
+# PRÉFIXES DE NOM :
+#
+#   MP_        = sera remplacé automatiquement par MP0_ ou MP1_ selon le
+#                personnage choisi dans la barre d'outils. C'est le préfixe de
+#                la plupart des stats "personnage".
+#   MPPLY_     = stat du COMPTE (partagée entre les 2 personnages). Préfixe
+#                des stats globales : classement multijoueur, éliminations.
+#   (aucun)    = le nom est utilisé tel que tapé, sans ajout.
+#                Ex : "EXEMPLE_STAT" est écrit tel quel.
+#
+# ----------------------------------------------------------------------------
+# CE QUE FAIT CE PRESET (résumé) :
+#
+#   - Débloque le FAST RUN (vitesse de course max permanente)
+#   - Met les 7 COMPÉTENCES à 100 (endurance, tir, force, etc.) + l'état psychiatrique
+#   - RANG 120 (environ 2 165 850 RP cumulés, formule officielle)
+#   - K/D ratio 6.66 (666 M d'éliminations / 100 M de morts)
+#
+# TOUT ÇA = 20 écritures. Le journal te dira combien ont été écrites, sautées
+# (stats absentes sur ce build), en échec ou discordantes.
+#
+# ============================================================================
+
+
+# ---- FAST RUN (vitesse de course max permanente) ---------------------------
+# -1 = "déverrouillé en permanence" côté flag d'ability.
+
+int    MP_CHAR_ABILITY_1_UNLCK      -1
+int    MP_CHAR_ABILITY_2_UNLCK      -1
+int    MP_CHAR_ABILITY_3_UNLCK      -1
+int    MP_CHAR_FM_ABILITY_1_UNLCK   -1
+int    MP_CHAR_FM_ABILITY_2_UNLCK   -1
+int    MP_CHAR_FM_ABILITY_3_UNLCK   -1
+
+
+# ---- COMPÉTENCES AU MAX (barre dans le menu Stats, 0-100) ------------------
+# Même effet que le bouton "Compétences au max" dans l'UI.
+
+int    MP_SCRIPT_INCREASE_STAM      100     # endurance (course longue)
+int    MP_SCRIPT_INCREASE_SHO       100     # tir (précision, chargeur)
+int    MP_SCRIPT_INCREASE_STRN      100     # force (coups, grimper)
+int    MP_SCRIPT_INCREASE_STL       100     # discrétion (pas silencieux)
+int    MP_SCRIPT_INCREASE_FLY       100     # pilotage (avions/hélicos)
+int    MP_SCRIPT_INCREASE_DRIV      100     # conduite (wheelies moto)
+int    MP_SCRIPT_INCREASE_LUNG      100     # apnée (temps sous l'eau)
+float  MP_PLAYER_MENTAL_STATE       100     # état psychiatrique (menu Stats)
+
+
+# ---- RANG / XP ------------------------------------------------------------
+# RP cumulés pour afficher un rang donné (formule officielle du jeu) :
+#   Rang 10   =       24 000 RP
+#   Rang 100  =    1 584 350 RP
+#   Rang 120  =    2 165 850 RP   ← valeur ci-dessous
+#   Rang 500  =   17 014 350 RP
+#   Rang 1000 =   47 551 850 RP
+#   Rang 8000 = ~1,79 milliard RP (plafond jeu)
+#
+# Le rang affiché est recalculé automatiquement par le jeu à partir du XP.
+
+int    MP_CHAR_XP_FM                2165850       # ≈ rang 120
+
+
+# ---- K/D CUSTOM -----------------------------------------------------------
+# Ratio = kills / deaths. Ici 666 M / 100 M = 6.66
+# MPPLY_KILL_DEATH_RATIO doit matcher pour que ce soit cohérent côté jeu.
+
+int    MPPLY_KILLS_PLAYERS          666000000
+int    MPPLY_DEATHS_PLAYER          100000000
+float  MPPLY_KILL_DEATH_RATIO       6.66
+int    MPPLY_DEATHS_PLAYER_SUICIDE  0             # pas de "morts par suicide"
+int    MPPLY_DM_TOTAL_KILLS         666000000
+
+
+# ---- COMPTEURS ANNEXES (facultatifs) --------------------------------------
+# Ces quatre stats n'existent pas dans le build 1.57 : le jeu les refuse.
+# Elles restent en commentaire pour les builds où elles existent ; les
+# décommenter fera apparaître 4 "sautés" dans le journal.
+#
+# int    MP_DRIVE_SKILL               1000000       # pts conduite accumulés
+# int    MP_DRIVE_SKILL_MINIGAMES     1000000
+# int    MP_TIMES_FINISHED_1ST        10000         # courses gagnées en 1er
+# int    MPPLY_AWD_JOB_CREATED        500           # succès jobs créés
+
+
+# ============================================================================
+# FIN DU PRESET
+#
+# Après exécution, le journal affichera p.ex. :
+#   « preset_max_tout.txt » terminé : écrits 20, sautés 0, échecs 0, discordants 0.
+# « sautés » = la stat n'existe pas dans ce build 1.57 (c'est normal pour
+# certaines stats qui ont changé de nom entre les versions).
+#
+# Astuce : tu peux dupliquer ce fichier et le customiser.
+# Ex. preset_discret.txt pour un perso stealth : mets juste SCRIPT_INCREASE_STAM
+# et SCRIPT_INCREASE_STL à 100 et laisse les autres à 0.
+# ============================================================================

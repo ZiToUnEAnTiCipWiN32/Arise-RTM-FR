@@ -1,3 +1,12 @@
+/*
+ * Arise - RTM (GTA V 1.57) - FR
+ * Copyright (C) 2026 yAmethxst — code d'origine
+ * Copyright (C) 2026 Zitoune — modifications du fork
+ *
+ * Ce fichier est distribué sous GNU GPL v3 (voir LICENSE). Les parties issues
+ * de l'outil d'origine restent sous licence MIT (voir LICENSE-MIT).
+ */
+
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -66,7 +75,7 @@ namespace Arise_RTM
 
         private void Write()
         {
-            List<string> lines = new List<string> { "# First bytes of each game function, learned from verified runs." };
+            List<string> lines = new List<string> { "# Premiers octets de chaque fonction du jeu, appris lors des exécutions vérifiées." };
             foreach (KeyValuePair<string, Dictionary<string, string>> section in sections)
             {
                 lines.Add(string.Empty);

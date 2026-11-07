@@ -1,14 +1,14 @@
-# Arise - RTM: example list for the Debug tab (Run a list...)
-# One write per line:  type  name-or-index  value      # starts a comment
-# MP_ at the start of a name = the character chosen in the toolbar (MP0_ or MP1_).
+# Arise - RTM : exemple de liste pour l'onglet Debug (Exécuter une liste...)
+# Une écriture par ligne :  type  nom-ou-index  valeur      # début de commentaire
+# MP_ en début de nom = le personnage choisi dans la barre d'outils (MP0_ ou MP1_).
 #
-#   int    MP_SOME_STAT      -1       32-bit integer
-#   bool   MP_SOME_STAT      true     true / false (or 1 / 0)
-#   float  MPPLY_SOME_STAT   6.66     decimal number
-#   pbool  1234              true     packed flag by index
-#   pint   1234              5        packed integer by index
+#   int    MP_SOME_STAT      -1       entier 32 bits
+#   bool   MP_SOME_STAT      true     true / false (ou 1 / 0)
+#   float  MPPLY_SOME_STAT   6.66     nombre décimal
+#   pbool  1234              true     drapeau packed par index
+#   pint   1234              5        entier packed par index
 #
-# This one is the same as the Unlock fast run button:
+# Ceci correspond au bouton « Débloquer la course rapide » :
 int MP_CHAR_ABILITY_1_UNLCK     -1
 int MP_CHAR_ABILITY_2_UNLCK     -1
 int MP_CHAR_ABILITY_3_UNLCK     -1

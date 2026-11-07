@@ -7,5 +7,13 @@ obj/
 # Files the tool creates next to the exe while it runs (they can hold your console IP)
 connection.txt
 rtm.log
+*.log
 ui.txt
 signatures.ini
+teleports.txt
+tenues_export.txt
+
+# Reference material that must never be published or compiled
+Arise-RTM-GTAV-PS4-1.0.0(1)/
+source_ext/
+test/

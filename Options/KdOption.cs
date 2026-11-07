@@ -1,14 +1,21 @@
+/*
+ * Arise - RTM (GTA V 1.57) - FR
+ * Copyright (C) 2026 yAmethxst — code d'origine
+ * Copyright (C) 2026 Zitoune — modifications du fork
+ *
+ * Ce fichier est distribué sous GNU GPL v3 (voir LICENSE). Les parties issues
+ * de l'outil d'origine restent sous licence MIT (voir LICENSE-MIT).
+ */
+
 using System;
 
 namespace Arise_RTM
 {
-    /// <summary>Kills, deaths and K/D ratio, as in the original script (kills and deaths are written together with the ratio).</summary>
+    /// <summary>Kills, deaths et ratio K/D, comme dans le script original (kills et deaths sont écrits avec le ratio).</summary>
     public static class KdOption
     {
         private const long IntMax = int.MaxValue;
         private const long BaseDeaths = 100000000;
-
-        public static readonly string[] HandlerKeysUsed = { HandlerKeys.StatSetInt, HandlerKeys.StatSetFloat };
 
         public static OptionResult ApplyRatio(OptionContext context, double ratio)
         {
@@ -54,7 +61,7 @@ namespace Arise_RTM
 
             context.WriteFloat(result, "MPPLY_KILL_DEATH_RATIO", deaths != 0 ? (float)((double)kills / deaths) : 0f);
             context.SaveIfRequested(result);
-            context.Log($"Kills {kills:N0} / deaths {deaths:N0}.");
+            context.Log($"Éliminations {kills:N0} / morts {deaths:N0}.");
             return result;
         }
     }

@@ -279,8 +279,11 @@ namespace libdebug {
 
             // Receive the count of processes
             byte[] countBytes = new byte[4];
-            sock.Receive(countBytes, 4, SocketFlags.None);
+            if (sock.Receive(countBytes, 4, SocketFlags.None) != 4)
+                throw new IOException("Connexion ps4debug fermée pendant la liste des processus. Reconnectez la PS4.");
             int number = BitConverter.ToInt32(countBytes, 0);
+            if (number < 0 || number > MAX_PROC_LIST_COUNT)
+                throw new InvalidDataException($"Flux ps4debug désynchronisé : nombre de processus invalide ({number}). Reconnectez la PS4.");
 
             // Receive data containing process names and IDs
             byte[] processData = ReceiveData(number * PROC_LIST_ENTRY_SIZE);
@@ -318,8 +321,11 @@ namespace libdebug {
 
             // recv count
             byte[] bnumber = new byte[4];
-            sock.Receive(bnumber, 4, SocketFlags.None);
+            if (sock.Receive(bnumber, 4, SocketFlags.None) != 4)
+                throw new IOException("Connexion ps4debug fermée pendant la lecture des régions mémoire. Reconnectez la PS4.");
             int number = BitConverter.ToInt32(bnumber, 0);
+            if (number < 0 || number > MAX_PROC_MAP_COUNT)
+                throw new InvalidDataException($"Flux ps4debug désynchronisé : nombre de régions invalide ({number}). Reconnectez la PS4.");
 
             // recv data
             byte[] data = ReceiveData(number * PROC_MAP_ENTRY_SIZE);

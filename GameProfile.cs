@@ -1,3 +1,12 @@
+/*
+ * Arise - RTM (GTA V 1.57) - FR
+ * Copyright (C) 2026 yAmethxst — code d'origine
+ * Copyright (C) 2026 Zitoune — modifications du fork
+ *
+ * Ce fichier est distribué sous GNU GPL v3 (voir LICENSE). Les parties issues
+ * de l'outil d'origine restent sous licence MIT (voir LICENSE-MIT).
+ */
+
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -21,7 +30,7 @@ namespace Arise_RTM
         {
             Dictionary<string, string> section = ReadSection(path, version);
             if (section.Count == 0)
-                throw new InvalidOperationException($"Section [{version}] not found in {Path.GetFileName(path)}.");
+                throw new InvalidOperationException($"Section [{version}] introuvable dans {Path.GetFileName(path)}.");
 
             GameProfile profile = new GameProfile
             {
@@ -38,7 +47,7 @@ namespace Arise_RTM
             foreach (string coreKey in HandlerKeys.Core)
             {
                 if (!profile.Handlers.ContainsKey(coreKey))
-                    throw new InvalidOperationException($"Handler '{coreKey}' is missing in profile.ini.");
+                    throw new InvalidOperationException($"Handler « {coreKey} » manquant dans profile.ini.");
             }
 
             foreach (string titleId in Require(section, "allowed_title_ids").Split(','))
@@ -55,7 +64,7 @@ namespace Arise_RTM
         {
             Dictionary<string, string> values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             if (!File.Exists(path))
-                throw new FileNotFoundException("profile.ini not found next to the executable.", path);
+                throw new FileNotFoundException("profile.ini introuvable à côté de l'exécutable.", path);
 
             bool inSection = false;
             foreach (string rawLine in File.ReadAllLines(path))
@@ -89,7 +98,7 @@ namespace Arise_RTM
         private static string Require(Dictionary<string, string> section, string key)
         {
             if (!section.TryGetValue(key, out string value) || string.IsNullOrWhiteSpace(value))
-                throw new InvalidOperationException($"Key '{key}' is missing in profile.ini.");
+                throw new InvalidOperationException($"Clé « {key} » manquante dans profile.ini.");
 
             return value;
         }
@@ -105,7 +114,7 @@ namespace Arise_RTM
             }
             catch (FormatException)
             {
-                throw new InvalidOperationException($"Invalid number for '{key}' in profile.ini: '{raw}'.");
+                throw new InvalidOperationException($"Nombre invalide pour « {key} » dans profile.ini : « {raw} ».");
             }
         }
     }

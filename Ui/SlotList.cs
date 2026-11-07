@@ -1,3 +1,12 @@
+/*
+ * Arise - RTM (GTA V 1.57) - FR
+ * Copyright (C) 2026 yAmethxst — code d'origine
+ * Copyright (C) 2026 Zitoune — modifications du fork
+ *
+ * Ce fichier est distribué sous GNU GPL v3 (voir LICENSE). Les parties issues
+ * de l'outil d'origine restent sous licence MIT (voir LICENSE-MIT).
+ */
+
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -5,7 +14,7 @@ using System.Windows.Forms;
 
 namespace Arise_RTM
 {
-    /// <summary>The 20 outfit slots, always visible. A slot without an outfit is grey and cannot be selected.</summary>
+    /// <summary>Les 20 slots de tenue, toujours affichés. Un slot vide est grisé et non sélectionnable.</summary>
     internal sealed class SlotList : Control
     {
         public const int RowHeight = 23;
@@ -49,7 +58,7 @@ namespace Arise_RTM
             return NameOf(slot).Trim().Length > 0;
         }
 
-        /// <summary>Replaces the names; the selection stays on the same slot when it still has an outfit.</summary>
+        /// <summary>Remplace les noms ; la sélection reste sur le même slot si celui-ci contient encore une tenue.</summary>
         public void SetNames(IList<string> newNames, int preferredSlot)
         {
             names.Clear();
@@ -111,7 +120,7 @@ namespace Arise_RTM
                     TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
 
                 Rectangle content = new Rectangle(NumberWidth + 10, row.Y + 1, Width - NumberWidth - 16, row.Height - 2);
-                TextRenderer.DrawText(g, has ? NameOf(slot) : "empty", Theme.Body, content, has ? Theme.Text : Theme.LineStrong,
+                TextRenderer.DrawText(g, has ? NameOf(slot) : "vide", Theme.Body, content, has ? Theme.Text : Theme.LineStrong,
                     TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
             }
         }

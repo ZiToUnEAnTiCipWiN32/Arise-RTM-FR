@@ -1,10 +1,20 @@
+/*
+ * Arise - RTM (GTA V 1.57) - FR
+ * Copyright (C) 2026 yAmethxst — code d'origine
+ * Copyright (C) 2026 Zitoune — modifications du fork
+ *
+ * Ce fichier est distribué sous GNU GPL v3 (voir LICENSE). Les parties issues
+ * de l'outil d'origine restent sous licence MIT (voir LICENSE-MIT).
+ */
+
 using System;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
 namespace Arise_RTM
 {
-    /// <summary>TextBox that keeps line breaks when pasting text that uses bare LF or CR.</summary>
+    /// <summary>TextBox qui préserve les sauts de ligne au collage, même si le texte source
+    /// utilise uniquement des LF ou des CR seuls.</summary>
     public class PasteTextBox : TextBox
     {
         private const int WM_PASTE = 0x0302;

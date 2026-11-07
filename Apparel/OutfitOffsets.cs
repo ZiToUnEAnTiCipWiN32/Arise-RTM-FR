@@ -1,10 +1,19 @@
+/*
+ * Arise - RTM (GTA V 1.57) - FR
+ * Copyright (C) 2026 yAmethxst — code d'origine
+ * Copyright (C) 2026 Zitoune — modifications du fork
+ *
+ * Ce fichier est distribué sous GNU GPL v3 (voir LICENSE). Les parties issues
+ * de l'outil d'origine restent sous licence MIT (voir LICENSE-MIT).
+ */
+
 using System;
 using System.Collections.Generic;
 using System.IO;
 
 namespace Arise_RTM
 {
-    /// <summary>Memory layout of the outfit slots for the supported game version (offsets.ini).</summary>
+    /// <summary>Layout mémoire des slots de tenue pour la version du jeu supportée (offsets.ini).</summary>
     public static class OutfitOffsets
     {
         public static ulong NamesBase { get; private set; }
@@ -23,7 +32,7 @@ namespace Arise_RTM
         {
             Dictionary<string, string> offsets = ParseSection(OffsetsPath, gameVersion);
             if (offsets.Count == 0)
-                throw new InvalidOperationException($"Section [{gameVersion}] not found in offsets.ini.");
+                throw new InvalidOperationException($"Section [{gameVersion}] introuvable dans offsets.ini.");
 
             NamesBase = Number(offsets, "vanilla_base");
             ClothesDrawDelta = Number(offsets, "clothes_draw_delta");
@@ -73,7 +82,7 @@ namespace Arise_RTM
         private static ulong Number(Dictionary<string, string> values, string key)
         {
             if (!values.TryGetValue(key, out string raw))
-                throw new InvalidOperationException($"Key '{key}' is missing in offsets.ini.");
+                throw new InvalidOperationException($"Clé « {key} » manquante dans offsets.ini.");
 
             raw = raw.Trim();
             return raw.StartsWith("0x", StringComparison.OrdinalIgnoreCase)

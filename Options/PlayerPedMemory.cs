@@ -1,11 +1,21 @@
+/*
+ * Arise - RTM (GTA V 1.57) - FR
+ * Copyright (C) 2026 yAmethxst — code d'origine
+ * Copyright (C) 2026 Zitoune — modifications du fork
+ *
+ * Ce fichier est distribué sous GNU GPL v3 (voir LICENSE). Les parties issues
+ * de l'outil d'origine restent sous licence MIT (voir LICENSE-MIT).
+ */
+
 using System;
 
 namespace Arise_RTM
 {
     /// <summary>
-    /// Where the local player's ped and its position live in the game (GTA V PS4 1.57), read from the code of the
-    /// player_ped_id handler and confirmed by a live probe: both copies of the position held the same coordinates.
-    /// Only memory is read or written here; no game code is executed.
+    /// Emplacement du ped local et de sa position dans le jeu (GTA V PS4 1.57), déduit du code du
+    /// handler player_ped_id et confirmé par une sonde en direct : les deux copies de la position
+    /// contenaient les mêmes coordonnées. Seule la mémoire est lue ou écrite ici, aucun code du
+    /// jeu n'est exécuté.
     /// </summary>
     public static class PlayerPedMemory
     {

@@ -1,0 +1,16 @@
+# Arise - RTM — exemple : les 7 compétences à 50
+#
+# À charger via Debug > « Exécuter une liste... ».
+# Les jauges seront à moitié remplies dans le menu pause (Stats).
+# Conseil : lis tes valeurs actuelles avant d'écrire, pour pouvoir revenir.
+# MP_ est remplacé par MP0_ ou MP1_ selon le personnage choisi
+# dans la barre d'outils (Personnage 1 / Personnage 2).
+#
+# Compétences : endurance, force, apnée, conduite, pilotage, tir, discrétion.
+int MP_SCRIPT_INCREASE_STAM 50
+int MP_SCRIPT_INCREASE_STRN 50
+int MP_SCRIPT_INCREASE_LUNG 50
+int MP_SCRIPT_INCREASE_DRIV 50
+int MP_SCRIPT_INCREASE_FLY  50
+int MP_SCRIPT_INCREASE_SHO  50
+int MP_SCRIPT_INCREASE_STL  50

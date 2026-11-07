@@ -1,3 +1,12 @@
+/*
+ * Arise - RTM (GTA V 1.57) - FR
+ * Copyright (C) 2026 yAmethxst — code d'origine
+ * Copyright (C) 2026 Zitoune — modifications du fork
+ *
+ * Ce fichier est distribué sous GNU GPL v3 (voir LICENSE). Les parties issues
+ * de l'outil d'origine restent sous licence MIT (voir LICENSE-MIT).
+ */
+
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -8,8 +17,9 @@ using System.Windows.Forms;
 namespace Arise_RTM
 {
     /// <summary>
-    /// Dark, flat, minimal. Near-black surfaces, hairline borders, light text, and the Rockstar yellow used only
-    /// for the primary action, the selected state and focus. No gradients, no rounded corners, no shadows.
+    /// Sombre, plat, minimal. Surfaces presque noires, bordures fines, texte clair, et le jaune
+    /// Rockstar utilisé seulement pour l'action principale, l'état sélectionné et le focus.
+    /// Pas de dégradés, pas de coins arrondis, pas d'ombres.
     /// </summary>
     internal static class Theme
     {
@@ -35,7 +45,7 @@ namespace Arise_RTM
         [DllImport("user32.dll", CharSet = CharSet.Unicode)]
         private static extern IntPtr SendMessage(IntPtr handle, int message, IntPtr wParam, string lParam);
 
-        /// <summary>Greyed hint shown inside an empty single-line text box.</summary>
+        /// <summary>Indication grisée affichée dans un champ texte vide (une ligne).</summary>
         public static void Cue(TextBox box, string text)
         {
             const int EM_SETCUEBANNER = 0x1501;
@@ -73,7 +83,8 @@ namespace Arise_RTM
             button.ForeColor = button.Checked ? Color.Black : Text;
         }
 
-        /// <summary>Themes every control below <paramref name="root"/> (Tag="primary": yellow button; Tag="keep": left alone).</summary>
+        /// <summary>Applique le thème à tous les contrôles sous <paramref name="root"/>
+        /// (Tag="primary" : bouton jaune ; Tag="keep" : non modifié).</summary>
         public static void Apply(Control root)
         {
             foreach (Control child in root.Controls)
@@ -125,7 +136,7 @@ namespace Arise_RTM
         }
     }
 
-    /// <summary>Flat tile: text on the left, optional count and small outlined badges on the right.</summary>
+    /// <summary>Tuile plate : texte à gauche, compteur optionnel et petits badges contourés à droite.</summary>
     internal sealed class TileButton : Button
     {
         private bool hover, pressed;
@@ -135,7 +146,7 @@ namespace Arise_RTM
         public bool Globals { get; set; }
         public bool Primary { get; set; }
 
-        /// <summary>Yellow outline and text; fills with yellow on hover. For secondary actions.</summary>
+        /// <summary>Contour et texte jaunes ; se remplit en jaune au survol. Pour les actions secondaires.</summary>
         public bool Outline { get; set; }
 
         public bool Centered { get; set; }
@@ -221,7 +232,8 @@ namespace Arise_RTM
         }
     }
 
-    /// <summary>Text box that only accepts a whole number inside [Minimum, Maximum]; arrows and the mouse wheel step it.</summary>
+    /// <summary>Champ texte qui n'accepte qu'un nombre entier dans [Minimum, Maximum] ;
+    /// les flèches et la molette de la souris l'incrémentent.</summary>
     internal sealed class NumberBox : TextBox
     {
         public decimal Minimum { get; set; } = 0;
@@ -284,7 +296,7 @@ namespace Arise_RTM
         }
     }
 
-    /// <summary>Thin progress line: yellow fill, or a sliding segment while the total is unknown.</summary>
+    /// <summary>Fine barre de progression : remplissage jaune, ou segment qui glisse tant que le total est inconnu.</summary>
     internal sealed class ProgressStrip : Control
     {
         private readonly Timer timer = new Timer { Interval = 30 };
@@ -333,7 +345,8 @@ namespace Arise_RTM
         }
     }
 
-    /// <summary>Panel with a muted uppercase title and a hairline under it (children start below the first 20 px).</summary>
+    /// <summary>Panel avec un titre en majuscules atténuées et une ligne fine en dessous
+    /// (les enfants commencent sous les 20 premiers pixels).</summary>
     internal class Section : System.Windows.Forms.Panel
     {
         private const int TitleHeight = 19;
@@ -366,7 +379,8 @@ namespace Arise_RTM
         }
     }
 
-    /// <summary>Text-only tab strip (selected tab: white text and a yellow underline) over a content area; no native tab control.</summary>
+    /// <summary>Barre d'onglets purement texte (onglet actif : texte blanc et soulignement jaune)
+    /// au-dessus d'une zone de contenu ; n'utilise pas le TabControl natif.</summary>
     internal sealed class ThemedTabs : System.Windows.Forms.Panel
     {
         private const int HeaderHeight = 28;

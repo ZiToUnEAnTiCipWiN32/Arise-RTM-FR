@@ -1,4 +1,8 @@
-name = Example outfit
+# Arise - RTM : exemple de tenue pour l'onglet Tenues (importer 1 tenue)
+# Chaque vêtement s'écrit au format draw/texture, par exemple 7/0.
+# Une tenue exportée depuis l'outil peut être collée ou importée telle quelle.
+
+name = Ma tenue
 top = 7/0
 undershirt = 15/0
 legs = 10/0

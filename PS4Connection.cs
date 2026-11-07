@@ -1,4 +1,13 @@
-﻿using System;
+﻿/*
+ * Arise - RTM (GTA V 1.57) - FR
+ * Copyright (C) 2026 yAmethxst — code d'origine
+ * Copyright (C) 2026 Zitoune — modifications du fork
+ *
+ * Ce fichier est distribué sous GNU GPL v3 (voir LICENSE). Les parties issues
+ * de l'outil d'origine restent sous licence MIT (voir LICENSE-MIT).
+ */
+
+using System;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
@@ -9,6 +18,7 @@ namespace Arise_RTM
 {
     public class PS4Connection
     {
+        private readonly object ioLock = new object();
         private PS4DBG ps4;
         public bool IsConnected { get; private set; } = false;
 
@@ -58,36 +68,55 @@ namespace Arise_RTM
 
         public void Connect(string ip)
         {
-            ps4 = new PS4DBG(ip);
-            ps4.Connect();
-            IsConnected = true;
+            lock (ioLock)
+            {
+                ps4 = new PS4DBG(ip);
+                IsConnected = ps4.Connect();
+            }
         }
 
         public void Disconnect()
         {
-            if (ps4 != null) ps4.Disconnect();
-            IsConnected = false;
+            lock (ioLock)
+            {
+                if (ps4 != null)
+                {
+                    try { ps4.Disconnect(); } catch { }
+                    ps4 = null;
+                }
+
+                IsConnected = false;
+            }
         }
 
         public void Notify(string message)
         {
-            if (IsConnected) ps4.Notify(222, message);
+            lock (ioLock)
+            {
+                if (IsConnected) ps4.Notify(222, message);
+            }
         }
 
         public int FindProcessID(string name)
         {
-            if (!IsConnected) return -1;
+            lock (ioLock)
+            {
+                if (!IsConnected || ps4 == null) return -1;
 
-            var list = ps4.GetProcessList();
-            var proc = list.FindProcess(name);
+                var list = ps4.GetProcessList();
+                var proc = list.FindProcess(name);
 
-            return (proc != null) ? proc.pid : -1;
+                return (proc != null) ? proc.pid : -1;
+            }
         }
 
         public int GetConsoleFirmwareRaw()
         {
-            if (!IsConnected || ps4 == null) return 0;
-            return ps4.GetExtFWVersion();
+            lock (ioLock)
+            {
+                if (!IsConnected || ps4 == null) return 0;
+                return ps4.GetExtFWVersion();
+            }
         }
 
         public string GetConsoleFirmwareText()
@@ -103,111 +132,22 @@ namespace Arise_RTM
         public bool TryGetProcessInfo(int pid, out ProcessInfo processInfo)
         {
             processInfo = new ProcessInfo();
-            if (!IsConnected || ps4 == null || pid <= 0) return false;
+            if (pid <= 0) return false;
 
-            try
+            lock (ioLock)
             {
-                processInfo = ps4.GetProcessInfo(pid);
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
-        }
+                if (!IsConnected || ps4 == null) return false;
 
-        public bool TryGetGamePatchVersion(int pid, out string appVersion, out string packageVersion)
-        {
-            appVersion = string.Empty;
-            packageVersion = string.Empty;
-
-            if (!IsConnected || ps4 == null || pid <= 0)
-                return false;
-
-            try
-            {
-                ProcessMap processMap = ps4.GetProcessMaps(pid);
-                if (processMap?.entries == null || processMap.entries.Length == 0)
+                try
+                {
+                    processInfo = ps4.GetProcessInfo(pid);
+                    return true;
+                }
+                catch
+                {
                     return false;
-
-                foreach (MemoryEntry entry in processMap.entries)
-                {
-                    if (entry == null || string.IsNullOrWhiteSpace(entry.name))
-                        continue;
-
-                    if (entry.name.IndexOf("param.sfo", StringComparison.OrdinalIgnoreCase) < 0)
-                        continue;
-
-                    if (TryParseSfoFromMemoryEntry(pid, entry, out appVersion, out packageVersion))
-                        return true;
-                }
-
-                foreach (MemoryEntry entry in processMap.entries)
-                {
-                    if (entry == null)
-                        continue;
-
-                    string mapName = entry.name ?? string.Empty;
-                    bool isCandidate =
-                        string.IsNullOrWhiteSpace(mapName) ||
-                        mapName.IndexOf("app0", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                        mapName.IndexOf("sce_sys", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                        mapName.IndexOf("sandbox", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                        mapName.IndexOf("eboot", StringComparison.OrdinalIgnoreCase) >= 0;
-
-                    if (!isCandidate)
-                        continue;
-
-                    if (TryParseSfoFromMemoryEntry(pid, entry, out appVersion, out packageVersion))
-                        return true;
                 }
             }
-            catch
-            {
-                return false;
-            }
-
-            return false;
-        }
-
-        public bool TryGetGamePatchVersionFromFtp(string consoleIp, string titleId, out string appVersion, out string packageVersion)
-        {
-            return TryGetGamePatchVersionFromFtp(consoleIp, titleId, out appVersion, out packageVersion, 2121);
-        }
-
-        public bool TryGetGamePatchVersionFromFtp(
-            string consoleIp,
-            string titleId,
-            out string appVersion,
-            out string packageVersion,
-            int preferredPort)
-        {
-            return TryGetGamePatchVersionFromFtp(
-                consoleIp,
-                titleId,
-                out appVersion,
-                out packageVersion,
-                out _,
-                out _,
-                preferredPort);
-        }
-
-        public bool TryGetGamePatchVersionFromFtp(
-            string consoleIp,
-            string titleId,
-            out string appVersion,
-            out string packageVersion,
-            out string sourcePath,
-            out string errorInfo)
-        {
-            return TryGetGamePatchVersionFromFtp(
-                consoleIp,
-                titleId,
-                out appVersion,
-                out packageVersion,
-                out sourcePath,
-                out errorInfo,
-                2121);
         }
 
         public bool TryGetGamePatchVersionFromFtp(
@@ -226,7 +166,7 @@ namespace Arise_RTM
 
             if (string.IsNullOrWhiteSpace(consoleIp) || string.IsNullOrWhiteSpace(titleId))
             {
-                errorInfo = "Invalid console IP or title ID.";
+                errorInfo = "IP de console ou Title ID invalide.";
                 return false;
             }
 
@@ -257,10 +197,10 @@ namespace Arise_RTM
                 }
 
                 if (attempts.Length > 0) attempts.Append(" | ");
-                attempts.Append($"{remotePath} -> downloaded, but the param.sfo could not be parsed.");
+                attempts.Append($"{remotePath} -> téléchargé, mais le param.sfo n'a pas pu être analysé.");
             }
 
-            errorInfo = attempts.Length > 0 ? attempts.ToString() : "No FTP attempt was made.";
+            errorInfo = attempts.Length > 0 ? attempts.ToString() : "Aucune tentative FTP n'a été effectuée.";
             return false;
         }
 
@@ -274,31 +214,6 @@ namespace Arise_RTM
             }
 
             return new[] { 2121, 21 };
-        }
-
-        private bool TryParseSfoFromMemoryEntry(int pid, MemoryEntry entry, out string appVersion, out string packageVersion)
-        {
-            appVersion = string.Empty;
-            packageVersion = string.Empty;
-
-            ulong start = entry.start;
-            ulong end = entry.end;
-            if (end <= start)
-                return false;
-
-            ulong range = end - start;
-            if (range == 0)
-                return false;
-
-            int readSize = (int)Math.Min(range, 0x20000UL);
-            if (readSize <= 0)
-                return false;
-
-            byte[] data = ps4.ReadMemory(pid, start, readSize);
-            if (data == null || data.Length < 0x20)
-                return false;
-
-            return TryParseSfoVersions(data, out appVersion, out packageVersion);
         }
 
         private static bool TryParseSfoVersions(byte[] data, out string appVersion, out string packageVersion)
@@ -450,7 +365,7 @@ namespace Arise_RTM
                             {
                                 if (responseStream == null)
                                 {
-                                    errorInfo = $"port {ftpPort}, passive={usePassive}: empty response stream";
+                                    errorInfo = $"port {ftpPort}, passif={usePassive} : flux de réponse vide";
                                     continue;
                                 }
 
@@ -459,62 +374,80 @@ namespace Arise_RTM
                                 if (data.Length > 0)
                                     return true;
 
-                                errorInfo = $"port {ftpPort}, passive={usePassive}: empty file";
+                                errorInfo = $"port {ftpPort}, passif={usePassive} : fichier vide";
                             }
                         }
                         catch (Exception ex)
                         {
-                            errorInfo = $"port {ftpPort}, passive={usePassive}: {ex.Message}";
+                            errorInfo = $"port {ftpPort}, passif={usePassive} : {ex.Message}";
                         }
                     }
                 }
             }
 
             if (string.IsNullOrWhiteSpace(errorInfo))
-                errorInfo = "FTP download failed for an unknown reason";
+                errorInfo = "Échec du téléchargement FTP pour une raison inconnue";
 
             return false;
         }
 
         public byte[] ReadMemory(int pid, ulong address, int size)
         {
-            if (!IsConnected) return null;
-            return ps4.ReadMemory(pid, address, size);
+            lock (ioLock)
+            {
+                if (!IsConnected || ps4 == null) return null;
+                return ps4.ReadMemory(pid, address, size);
+            }
         }
 
         public void WriteMemory(int pid, ulong address, byte[] data)
         {
-            if (IsConnected) ps4.WriteMemory(pid, address, data);
+            lock (ioLock)
+            {
+                if (IsConnected && ps4 != null) ps4.WriteMemory(pid, address, data);
+            }
         }
 
         private void RequireConnection()
         {
             if (!IsConnected || ps4 == null)
-                throw new InvalidOperationException("Not connected to the PS4.");
+                throw new InvalidOperationException("Non connecté à la PS4.");
         }
 
         public ProcessMap GetProcessMaps(int pid)
         {
-            RequireConnection();
-            return ps4.GetProcessMaps(pid);
+            lock (ioLock)
+            {
+                RequireConnection();
+                return ps4.GetProcessMaps(pid);
+            }
         }
 
         public ulong InstallRpc(int pid)
         {
-            RequireConnection();
-            return ps4.InstallRPC(pid);
+            lock (ioLock)
+            {
+                RequireConnection();
+                return ps4.InstallRPC(pid);
+            }
         }
 
         public ulong CallFunction(int pid, ulong rpcStub, ulong address, params object[] args)
         {
-            RequireConnection();
-            return ps4.Call(pid, rpcStub, address, args);
+            lock (ioLock)
+            {
+                RequireConnection();
+                return ps4.Call(pid, rpcStub, address, args);
+            }
         }
 
         public ulong AllocateMemory(int pid, int length)
         {
-            RequireConnection();
-            return ps4.AllocateMemory(pid, length);
+            lock (ioLock)
+            {
+                RequireConnection();
+                return ps4.AllocateMemory(pid, length);
+            }
         }
     }
 }

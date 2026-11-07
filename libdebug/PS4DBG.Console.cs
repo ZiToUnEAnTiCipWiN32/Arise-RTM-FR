@@ -24,28 +24,30 @@ namespace libdebug {
         }
 
         /// <summary>
-        /// Print to serial port
+        /// Print to serial port (UTF-8).
         /// </summary>
         public void Print(string str) {
             CheckConnected();
 
             string raw = str + "\0";
+            byte[] bytes = Encoding.UTF8.GetBytes(raw);
 
-            SendCMDPacket(CMDS.CMD_CONSOLE_PRINT, CMD_CONSOLE_PRINT_PACKET_SIZE, raw.Length);
-            SendData(Encoding.ASCII.GetBytes(raw), raw.Length);
+            SendCMDPacket(CMDS.CMD_CONSOLE_PRINT, CMD_CONSOLE_PRINT_PACKET_SIZE, bytes.Length);
+            SendData(bytes, bytes.Length);
             CheckStatus();
         }
 
         /// <summary>
-        /// Notify console
+        /// Notify console (UTF-8 — nécessaire pour afficher les accents côté toast PS4).
         /// </summary>
         public void Notify(int messageType, string message) {
             CheckConnected();
 
             string raw = message + "\0";
+            byte[] bytes = Encoding.UTF8.GetBytes(raw);
 
-            SendCMDPacket(CMDS.CMD_CONSOLE_NOTIFY, CMD_CONSOLE_NOTIFY_PACKET_SIZE, messageType, raw.Length);
-            SendData(Encoding.ASCII.GetBytes(raw), raw.Length);
+            SendCMDPacket(CMDS.CMD_CONSOLE_NOTIFY, CMD_CONSOLE_NOTIFY_PACKET_SIZE, messageType, bytes.Length);
+            SendData(bytes, bytes.Length);
             CheckStatus();
         }
 

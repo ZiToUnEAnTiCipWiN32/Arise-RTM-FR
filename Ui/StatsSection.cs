@@ -1,3 +1,12 @@
+/*
+ * Arise - RTM (GTA V 1.57) - FR
+ * Copyright (C) 2026 yAmethxst — code d'origine
+ * Copyright (C) 2026 Zitoune — modifications du fork
+ *
+ * Ce fichier est distribué sous GNU GPL v3 (voir LICENSE). Les parties issues
+ * de l'outil d'origine restent sous licence MIT (voir LICENSE-MIT).
+ */
+
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -8,8 +17,8 @@ using System.Windows.Forms;
 namespace Arise_RTM
 {
     /// <summary>
-    /// Fast run unlock and custom K/D (ratio, kills, deaths) for the character chosen in the toolbar.
-    /// The buttons stay disabled until a character is chosen.
+    /// Déblocage fast run et K/D personnalisé (ratio, éliminations, morts) pour le personnage
+    /// choisi dans la barre d'outils. Les boutons restent désactivés tant qu'il n'est pas choisi.
     /// </summary>
     internal sealed class StatsSection : Section
     {
@@ -25,12 +34,12 @@ namespace Arise_RTM
         public StatsSection(IToolHost host)
         {
             this.host = host;
-            Text = "Stats";
+            Text = "Statistiques";
             BuildUi();
             SetCharacterChosen(false);
         }
 
-        /// <summary>Enables the buttons only while Character 1 or 2 is chosen in the toolbar.</summary>
+        /// <summary>N'active les boutons que si Personnage 1 ou 2 est choisi dans la barre d'outils.</summary>
         public void SetCharacterChosen(bool chosen)
         {
             foreach (TileButton button in actionButtons)
@@ -39,18 +48,24 @@ namespace Arise_RTM
 
         private void BuildUi()
         {
-            TileButton unlock = new TileButton { Text = "Unlock fast run", Primary = true, Centered = true };
+            TileButton unlock = new TileButton { Text = "Débloquer le fast run", Primary = true, Centered = true };
             unlock.SetBounds(10, 30, 254, TileHeight);
             unlock.Click += async (s, e) => await host.RunOptionAsync(new FastRunOption());
             actionButtons.Add(unlock);
             Controls.Add(unlock);
 
+            TileButton skillsMax = new TileButton { Text = "Compétences au max (8 stats à 100)", Primary = true, Centered = true };
+            skillsMax.SetBounds(10, 60, 254, TileHeight);
+            skillsMax.Click += async (s, e) => await host.RunOptionAsync(new SkillsMaxOption());
+            actionButtons.Add(skillsMax);
+            Controls.Add(skillsMax);
+
             TextBox ratio = new TextBox { Text = "6.66", TextAlign = HorizontalAlignment.Right };
-            AddRow(ratio, "K/D", "Set K/D", 72, async () =>
+            AddRow(ratio, "K/D", "Fixer K/D", 100, async () =>
             {
                 if (!TryParseDouble(ratio.Text, out double value))
                 {
-                    MessageBox.Show("Enter a number for the K/D ratio (e.g. 6.66).", "K/D", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MessageBox.Show("Entrez un nombre pour le ratio K/D (ex : 6.66).", "K/D", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
 
@@ -58,17 +73,17 @@ namespace Arise_RTM
             });
 
             TextBox kills = new TextBox { TextAlign = HorizontalAlignment.Right };
-            AddRow(kills, "Kills", "Set kills", 106, () =>
-                ApplyNumber(kills, "Kills", value => RunKd($"Kills {value}", ctx => KdOption.ApplyKills(ctx, value))));
+            AddRow(kills, "Élim.", "Fixer élim.", 132, () =>
+                ApplyNumber(kills, "Élim.", value => RunKd($"Éliminations {value}", ctx => KdOption.ApplyKills(ctx, value)), "éliminations"));
 
             TextBox deaths = new TextBox { TextAlign = HorizontalAlignment.Right };
-            AddRow(deaths, "Deaths", "Set deaths", 140, () =>
-                ApplyNumber(deaths, "Deaths", value => RunKd($"Deaths {value}", ctx => KdOption.ApplyDeaths(ctx, value))));
+            AddRow(deaths, "Morts", "Fixer morts", 164, () =>
+                ApplyNumber(deaths, "Morts", value => RunKd($"Morts {value}", ctx => KdOption.ApplyDeaths(ctx, value))));
 
             Controls.Add(new Label
             {
-                Text = "Choose Character 1 or 2 in the toolbar to enable the buttons. Change session to see the new values.",
-                Location = new Point(10, 184), Size = new Size(254, 54), ForeColor = UiStyle.Muted
+                Text = "Choisissez Personnage 1 ou 2 dans la barre d'outils pour activer les boutons.",
+                Location = new Point(10, 200), Size = new Size(254, 54), ForeColor = UiStyle.Muted
             });
         }
 
@@ -87,11 +102,11 @@ namespace Arise_RTM
             Controls.Add(button);
         }
 
-        private async Task ApplyNumber(TextBox box, string label, Func<long, Task> apply)
+        private async Task ApplyNumber(TextBox box, string label, Func<long, Task> apply, string errorName = null)
         {
             if (!long.TryParse(box.Text.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out long value))
             {
-                MessageBox.Show($"Enter a whole number for {label.ToLowerInvariant()}.", label, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show($"Entrez un nombre entier pour {errorName ?? label.ToLowerInvariant()}.", label, MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
