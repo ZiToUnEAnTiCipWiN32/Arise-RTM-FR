@@ -34,11 +34,11 @@ Fork français avec options supplémentaires par **Zitoune** — [Site](https://
 
 ## Prérequis
 
-- PS4 sur **firmware 14.00**, jailbreak via GoldHEN.
+- PS4 sur **firmware 14.00** ou **firmware 14.02**, jailbreak via GoldHEN.
 - GTA V **1.57**, EU (`CUSA00411`) ou US (`CUSA00419`).
 - PC Windows sur le même réseau que la console, avec .NET Framework 4.8.1.
 
-Testé sur firmware 14.00 avec GTA V 1.57 (EU).
+Testé sur firmware 14.00 et 14.02 avec GTA V 1.57 (EU).
 
 ## Compilation
 
@@ -52,7 +52,7 @@ Le résultat est produit dans `bin/Release/net481/` (`Arise - RTM.exe`). Les fic
 
 ## Utilisation
 
-1. PS4 sur firmware **14.00**.
+1. PS4 sur firmware **14.00** ou **14.02**.
 2. Sur la console, ouvre https://well0nez.github.io/afterglow-web/ et jailbreak.
 3. Dans GoldHEN, ouvre **Server Settings** et active **FTP** + **Payload Loader**.
 4. Lance GTA V.
@@ -88,7 +88,7 @@ Va dans **Debug**, puis utilise **« Vérifier une liste (n'écrit rien) »** ou
 
 - **yAmethxst** — outil original Arise - RTM. [X](https://x.com/yAmethxst) · [Discord](https://amethxst.dev/discord)
 - **Zitoune** — fork FR, nouvelles options (niveau, téléports, compétences, export), nettoyage de l'interface, bascule GPL-3.0. [Site](https://zitouneanticip.fr) · [YouTube](https://youtube.com/@Zitoune-anticip-WIN32) · [Twitch](https://twitch.tv/zitouneanticip) · [Discord](https://discord.gg/yBduvdrgHA)
-- **ps4debug-NG** par OpenSourcerer (OSR), maintenu par Pharaoh2k : https://github.com/Pharaoh2k/ps4debug-NG. `ps4debug.bin` est la v1.3.3 de ce payload, sous GPL-3.0. Remerciements : golden, Ctn, SiSTRo, DeathRGH et Pharaoh2k.
+- **ps4debug-NG** par OpenSourcerer (OSR), maintenu par Pharaoh2k : https://github.com/Pharaoh2k/ps4debug-NG. `ps4debug.bin` est la v1.3.4 de ce payload, sous GPL-3.0. Remerciements : golden, Ctn, SiSTRo, DeathRGH et Pharaoh2k.
 - **GoldHEN** par SiSTRo : https://ko-fi.com/sistro/shop
 - **afterglow** par well0nez/m0zz : https://well0nez.github.io/afterglow-web/
 - **libdebug** — bibliothèque cliente C# pour ps4debug, par golden (jogolden) : https://github.com/jogolden/ps4debug. Le dépôt amont ne déclare aucune licence : le code reste la propriété de son auteur. Le fork y a apporté des modifications limitées (UTF-8 des notifications, garde-fous de flux), documentées dans CREDITS.txt.

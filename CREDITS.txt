@@ -32,7 +32,7 @@ Matériaux tiers
 ---------------
 
 ps4debug.bin
-  ps4debug-NG v1.3.3 par OpenSourcerer (OSR), le payload envoyé à la console
+  ps4debug-NG v1.3.4 par OpenSourcerer (OSR), le payload envoyé à la console
   pour lire et écrire la mémoire du jeu.
   Dépôt (maintenu par Pharaoh2k) : https://github.com/Pharaoh2k/ps4debug-NG
   Licence GPL-3.0 ; la source et le texte de la licence sont disponibles
@@ -56,7 +56,7 @@ GoldHEN
   Par SiSTRo : https://ko-fi.com/sistro/shop
 
 afterglow
-  Exploit kernel PS4 utilisé pour jailbreak la console (firmware 14.00),
+  Exploit kernel PS4 utilisé pour jailbreak la console (firmware 14.00 et 14.02),
   par well0nez/m0zz : https://well0nez.github.io/afterglow-web/
 
 Marques
